@@ -1,0 +1,40 @@
+# OpenClaw Center Agent Configuration
+# Copy this file to C:\ProgramData\OpenClawCenterAgent\config.yaml
+
+# Center server URL (required)
+center_url: "http://your-center-server:8000"
+
+# Machine unique code (required, must match center registry)
+machine_code: "MACHINE-001"
+
+# Authentication token (optional, for future use)
+token: ""
+
+# Heartbeat interval in seconds (default: 60)
+heartbeat_interval: 60
+
+# Resource collection interval in seconds (default: 300)
+resource_interval: 300
+
+# Config and skills collection interval in seconds (default: 600)
+config_interval: 600
+
+# Task pull interval in seconds (default: 60)
+task_interval: 60
+
+# OpenClaw configuration file path (optional, for config scanning)
+openclaw_config_path: ""
+
+# OpenClaw skills directory (optional, for skills scanning)
+openclaw_skills_dir: ""
+
+# OpenClaw prompts directory (optional, for prompt sync target)
+openclaw_prompts_dir: ""
+
+# Log settings
+log_max_bytes: 10485760  # 10MB
+log_backup_count: 5
+
+# Retry settings for failed connections
+max_retries: 3
+retry_delay: 10
