@@ -111,8 +111,7 @@ function alertTagType(type) {
 
 async function loadOverview() {
   try {
-    const { data } = await getMonitorOverview()
-    overview.value = data
+    overview.value = await getMonitorOverview()
   } catch {
     ElMessage.error('获取概览数据失败')
   }
@@ -121,8 +120,8 @@ async function loadOverview() {
 async function loadAlerts() {
   tableLoading.value = true
   try {
-    const { data } = await getMonitorAlerts()
-    alerts.value = Array.isArray(data) ? data : data.items ?? []
+    const data = await getMonitorAlerts()
+    alerts.value = Array.isArray(data) ? data : []
   } catch {
     ElMessage.error('获取告警数据失败')
   } finally {

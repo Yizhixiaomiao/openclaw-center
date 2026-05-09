@@ -36,6 +36,7 @@ app.include_router(agent.router, prefix="/api/agent", tags=["Agent"])
 @app.on_event("startup")
 def startup():
     Base.metadata.create_all(bind=engine)
+    auth.seed_admin()
 
 
 @app.get("/api/health")

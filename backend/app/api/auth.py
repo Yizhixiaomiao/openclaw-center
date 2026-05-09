@@ -1,5 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, HTTPException
 from app.database import SessionLocal
 from app.schemas.auth import LoginRequest, TokenResponse
 from app.utils.security import verify_password, hash_password, create_access_token
@@ -25,10 +24,6 @@ def seed_admin():
             db.commit()
     finally:
         db.close()
-
-
-# Call seed on import
-seed_admin()
 
 
 @router.post("/login", response_model=TokenResponse)

@@ -3,7 +3,7 @@ from typing import List
 
 
 class Settings(BaseSettings):
-    DATABASE_URL: str = "mysql+pymysql://openclaw:openclaw_pass_2024@localhost:3306/openclaw_center"
+    DATABASE_URL: str = "mysql+pymysql://root:130746@localhost:3306/openclaw_center"
     JWT_SECRET_KEY: str = "openclaw-jwt-secret-change-in-production"
     JWT_ALGORITHM: str = "HS256"
     JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 480

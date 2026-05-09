@@ -81,7 +81,7 @@ async function handleLogin() {
 
   loading.value = true
   try {
-    const { data } = await login({
+    const data = await login({
       username: loginForm.username,
       password: loginForm.password,
     })
