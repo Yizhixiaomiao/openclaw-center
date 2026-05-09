@@ -21,6 +21,10 @@ class AgentConfig:
                 self._data = yaml.safe_load(f) or {}
         self._ensure_dirs()
 
+    def reload(self):
+        """Reload config from disk (e.g. after remote update)."""
+        self.load()
+
     def _ensure_dirs(self):
         for d in [DEFAULT_LOG_DIR, DEFAULT_CACHE_DIR, DEFAULT_BACKUP_DIR, DEFAULT_PACKAGES_DIR, DEFAULT_SCRIPTS_DIR]:
             os.makedirs(d, exist_ok=True)
@@ -54,6 +58,14 @@ class AgentConfig:
         return self._data.get("task_interval", 60)
 
     @property
+    def current_user(self):
+        try:
+            return os.getlogin()
+        except Exception:
+            import getpass
+            return getpass.getuser()
+
+    @property
     def openclaw_config_path(self):
         return self._data.get("openclaw_config_path", "")
 
@@ -80,3 +92,15 @@ class AgentConfig:
     @property
     def retry_delay(self):
         return self._data.get("retry_delay", 10)
+
+    @property
+    def agent_config_content(self):
+        try:
+            with open(self.config_path, "r", encoding="utf-8") as f:
+                return f.read()
+        except Exception:
+            return ""
+
+    @property
+    def agent_config_path(self):
+        return self.config_path

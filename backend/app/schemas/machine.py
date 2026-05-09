@@ -17,6 +17,7 @@ class MachineCreate(BaseModel):
     plan_id: Optional[int] = None
     openclaw_version: Optional[str] = None
     agent_version: Optional[str] = None
+    current_user: Optional[str] = None
 
 
 class MachineUpdate(BaseModel):
@@ -33,6 +34,7 @@ class MachineUpdate(BaseModel):
     openclaw_version: Optional[str] = None
     agent_version: Optional[str] = None
     status: Optional[str] = None
+    current_user: Optional[str] = None
 
 
 class MachineResponse(BaseModel):
@@ -51,6 +53,7 @@ class MachineResponse(BaseModel):
     openclaw_version: Optional[str] = None
     agent_version: Optional[str] = None
     status: str
+    current_user: Optional[str] = None
     cpu_usage: Optional[float] = None
     memory_usage: Optional[float] = None
     disk_usage: Optional[float] = None
@@ -69,6 +72,9 @@ class AgentRegisterRequest(BaseModel):
     os: Optional[str] = None
     agent_version: Optional[str] = None
     openclaw_version: Optional[str] = None
+    current_user: Optional[str] = None
+    agent_config_content: Optional[str] = None
+    agent_config_path: Optional[str] = None
 
 
 class AgentHeartbeatRequest(BaseModel):
@@ -78,6 +84,9 @@ class AgentHeartbeatRequest(BaseModel):
     memory_usage: Optional[float] = None
     disk_usage: Optional[float] = None
     service_status: Optional[str] = None
+    current_user: Optional[str] = None
+    agent_config_content: Optional[str] = None
+    agent_config_path: Optional[str] = None
 
 
 class AgentConfigReportRequest(BaseModel):
@@ -87,6 +96,8 @@ class AgentConfigReportRequest(BaseModel):
     model_name: Optional[str] = None
     skills: Optional[str] = None  # JSON string
     prompt_versions: Optional[str] = None  # JSON string
+    config_content: Optional[str] = None  # Full config file content
+    config_file_path: Optional[str] = None  # Full path to config file on agent machine
 
 
 class AgentTaskReportRequest(BaseModel):
@@ -115,3 +126,11 @@ class AgentUsageReportRequest(BaseModel):
 class AgentSkillSyncRequest(BaseModel):
     machine_code: str
     skills: str  # JSON string of skill packages (code, name, version, description, zip_base64, checksum, file_count, total_size)
+
+
+class ConfigUpdateRequest(BaseModel):
+    config_content: str  # Full JSON config content to save and sync
+
+
+class AgentConfigUpdateRequest(BaseModel):
+    agent_config_content: str  # Full YAML config content for agent

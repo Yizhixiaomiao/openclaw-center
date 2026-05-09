@@ -21,6 +21,7 @@ class Machine(Base):
     openclaw_version = Column(String(64))
     agent_version = Column(String(64))
     status = Column(Enum("online", "offline", "error", "pending_init", "disabled"), default="pending_init")
+    current_user = Column(String(128))
     cpu_usage = Column(Float, nullable=True)
     memory_usage = Column(Float, nullable=True)
     disk_usage = Column(Float, nullable=True)
@@ -38,6 +39,8 @@ class AgentInfo(Base):
     install_path = Column(String(256))
     service_status = Column(Enum("running", "stopped", "error"), default="stopped")
     last_report_at = Column(DateTime, nullable=True)
+    agent_config_content = Column(Text)
+    agent_config_path = Column(String(512))
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
 
@@ -51,4 +54,6 @@ class OpenClawConfig(Base):
     model_provider = Column(String(128))
     model_name = Column(String(128))
     config_json = Column(Text)
+    config_content = Column(Text)
+    config_file_path = Column(String(512))
     created_at = Column(DateTime, default=func.now())

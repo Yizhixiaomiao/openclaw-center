@@ -21,6 +21,9 @@ def register_agent(config):
         "ip": ip,
         "os": f"{platform.system()} {platform.release()}",
         "agent_version": "1.0.0",
+        "current_user": config.current_user,
+        "agent_config_content": config.agent_config_content,
+        "agent_config_path": config.agent_config_path,
     }
 
     for attempt in range(1, config.max_retries + 1):

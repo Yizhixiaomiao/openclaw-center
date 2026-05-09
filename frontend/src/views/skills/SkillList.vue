@@ -6,6 +6,9 @@
         <el-form-item label="关键词">
           <el-input v-model="filters.keyword" placeholder="名称/编码" clearable style="width: 180px" @keyup.enter="handleSearch" />
         </el-form-item>
+        <el-form-item label="机器IP">
+          <el-input v-model="filters.machine_ip" placeholder="按IP筛选" clearable style="width: 160px" @keyup.enter="handleSearch" />
+        </el-form-item>
         <el-form-item>
           <el-button type="primary" :icon="Search" @click="handleSearch">搜索</el-button>
           <el-button :icon="Refresh" @click="handleReset">重置</el-button>
@@ -21,18 +24,22 @@
         <el-table-column prop="code" label="编码" min-width="140" show-overflow-tooltip />
         <el-table-column prop="version" label="版本" width="90" align="center" />
         <el-table-column prop="description" label="描述" min-width="200" show-overflow-tooltip />
-        <el-table-column prop="skills_count" label="已安装机器" width="100" align="center">
+        <el-table-column label="已安装机器" width="100" align="center">
           <template #default="{ row }">
             <el-link type="primary" :underline="false" @click="showDetail(row.id)" style="cursor: pointer">
               {{ row.machines?.length || 0 }} 台
             </el-link>
           </template>
         </el-table-column>
-        <el-table-column prop="source_machine" label="来源" min-width="180" show-overflow-tooltip>
+        <el-table-column label="来源IP" min-width="140" show-overflow-tooltip>
           <template #default="{ row }">
-            <span v-if="row.machines && row.machines.length > 0">
-              {{ row.machines[0].hostname || row.machines[0].machine_code }}
-            </span>
+            <span v-if="row.machines && row.machines.length > 0">{{ row.machines[0].ip || '-' }}</span>
+            <span v-else style="color: #ccc">-</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="来源主机名" min-width="130" show-overflow-tooltip>
+          <template #default="{ row }">
+            <span v-if="row.machines && row.machines.length > 0">{{ row.machines[0].hostname || '-' }}</span>
             <span v-else style="color: #ccc">-</span>
           </template>
         </el-table-column>
@@ -87,7 +94,7 @@
     </el-dialog>
 
     <!-- 技能详情对话框 -->
-    <el-dialog v-model="detailVisible" title="技能详情" width="800px" destroy-on-close>
+    <el-dialog v-model="detailVisible" title="技能详情" width="960px" destroy-on-close>
       <div v-loading="detailLoading">
         <el-descriptions :column="2" border>
           <el-descriptions-item label="技能ID">{{ detailSkill.id }}</el-descriptions-item>
@@ -99,8 +106,9 @@
 
         <h4 style="margin: 20px 0 10px">已安装机器</h4>
         <el-table :data="detailMachines" border stripe style="width: 100%">
-          <el-table-column prop="machine_code" label="机器码" min-width="160" />
-          <el-table-column prop="hostname" label="主机名" min-width="130" />
+          <el-table-column prop="machine_code" label="机器码" min-width="140" />
+          <el-table-column prop="ip" label="IP" min-width="130" />
+          <el-table-column prop="hostname" label="主机名" min-width="120" />
           <el-table-column label="状态" width="100" align="center">
             <template #default="{ row }">
               <el-tag :type="row.status === 'installed' ? 'success' : 'info'" size="small">
@@ -115,6 +123,48 @@
           </el-table-column>
         </el-table>
         <el-empty v-if="detailMachines.length === 0" description="暂无机器安装此技能" />
+
+        <h4 style="margin: 20px 0 10px">文件浏览</h4>
+        <div class="file-browser">
+          <div class="file-tree-panel">
+            <el-tree
+              v-if="skillFiles.length > 0"
+              :data="skillFiles"
+              :props="{ label: 'path', children: 'children' }"
+              node-key="path"
+              highlight-current
+              default-expand-all
+              @node-click="onFileNodeClick"
+            >
+              <template #default="{ node, data }">
+                <span class="file-tree-node">
+                  <span>{{ data.type === 'dir' ? '📁' : '📄' }} {{ node.label.split('/').pop() }}</span>
+                  <span v-if="data.type === 'file'" class="file-size">{{ formatSize(data.size) }}</span>
+                </span>
+              </template>
+            </el-tree>
+            <el-empty v-else description="暂无文件" :image-size="60" />
+          </div>
+          <div class="file-content-panel">
+            <div v-if="selectedFilePath" class="file-content-header">
+              <span>{{ selectedFilePath }}</span>
+            </div>
+            <el-input
+              v-if="fileContent !== null"
+              v-model="fileContent"
+              type="textarea"
+              :rows="20"
+              readonly
+              style="font-family: monospace; font-size: 13px"
+            />
+            <div v-else-if="selectedFilePath" class="file-content-placeholder">
+              点击左侧文件查看内容
+            </div>
+            <div v-else class="file-content-placeholder">
+              选择文件以查看内容
+            </div>
+          </div>
+        </div>
       </div>
     </el-dialog>
 
@@ -173,13 +223,14 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Refresh } from '@element-plus/icons-vue'
-import { getSkills, createSkill, getSkillDetail, deleteSkill, removeSkillFromMachine } from '../../api/skill'
+import { getSkills, createSkill, getSkillDetail, deleteSkill, removeSkillFromMachine, getSkillFiles, getSkillFileContent } from '../../api/skill'
 import { getMachines } from '../../api/machine'
 import { distributeSkill as distributeSkillApi } from '../../api/deploy'
 
 // ---------- 筛选 ----------
 const filters = reactive({
   keyword: '',
+  machine_ip: '',
 })
 
 // ---------- 表格 ----------
@@ -199,7 +250,6 @@ async function fetchData() {
     const res = await getSkills(params)
     tableData.value = Array.isArray(res) ? res : (res.items || res.data || [])
     pagination.total = res.total || tableData.value.length
-    // Enrich with machine info
     await enrichSkills()
   } catch {
     // 已由拦截器处理
@@ -208,7 +258,6 @@ async function fetchData() {
   }
 }
 
-// Cache of skill -> machines mapping
 const skillMachinesMap = reactive({})
 
 async function enrichSkills() {
@@ -231,12 +280,18 @@ function handleSearch() {
 }
 
 function handleReset() {
-  Object.assign(filters, { keyword: '' })
+  Object.assign(filters, { keyword: '', machine_ip: '' })
   pagination.page = 1
   fetchData()
 }
 
-// ---------- 时间格式化 ----------
+function formatSize(bytes) {
+  if (!bytes) return ''
+  if (bytes < 1024) return bytes + ' B'
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB'
+  return (bytes / 1024 / 1024).toFixed(1) + ' MB'
+}
+
 function formatDateTime(val) {
   if (!val) return '-'
   const d = new Date(val)
@@ -292,40 +347,53 @@ async function handleSubmit() {
   }
 }
 
-// ---------- 审核 ----------
-async function handleAudit(id, auditStatus) {
-  const actionLabel = auditStatus === 'approved' ? '通过' : '拒绝'
-  try {
-    await ElMessageBox.confirm(`确定将此技能审核状态设为「${actionLabel}」吗？`, '审核确认', {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning',
-    })
-    fetchData()
-  } catch {
-    // 用户取消或请求失败
-  }
-}
-
 // ---------- 技能详情 ----------
 const detailVisible = ref(false)
 const detailLoading = ref(false)
 const detailSkill = ref({})
 const detailMachines = ref([])
 
+// File browsing state
+const skillFiles = ref([])
+const selectedFilePath = ref('')
+const fileContent = ref(null)
+const fileContentLoading = ref(false)
+
 async function showDetail(id) {
   detailVisible.value = true
   detailLoading.value = true
   detailSkill.value = {}
   detailMachines.value = []
+  skillFiles.value = []
+  selectedFilePath.value = ''
+  fileContent.value = null
   try {
-    const res = await getSkillDetail(id)
+    const [res, filesRes] = await Promise.all([
+      getSkillDetail(id),
+      getSkillFiles(id),
+    ])
     detailSkill.value = res.skill || {}
     detailMachines.value = res.machines || []
+    skillFiles.value = filesRes.files || []
   } catch {
     // handled by interceptor
   } finally {
     detailLoading.value = false
+  }
+}
+
+async function onFileNodeClick(data) {
+  if (data.type === 'dir') return
+  selectedFilePath.value = data.path
+  fileContent.value = null
+  fileContentLoading.value = true
+  try {
+    const res = await getSkillFileContent(detailSkill.value.id, data.path)
+    fileContent.value = res.content || ''
+  } catch {
+    fileContent.value = '（读取文件内容失败）'
+  } finally {
+    fileContentLoading.value = false
   }
 }
 
@@ -338,9 +406,7 @@ async function removeFromMachine(row) {
     })
     await removeSkillFromMachine(detailSkill.value.id, row.machine_id)
     ElMessage.success('技能已移除')
-    // Refresh detail
     showDetail(detailSkill.value.id)
-    // Also refresh list
     delete skillMachinesMap[detailSkill.value.id]
     fetchData()
   } catch {
@@ -367,10 +433,6 @@ async function handleDelete(id) {
 }
 
 // ---------- 状态映射 ----------
-const machineStatusType = (status) => {
-  const map = { online: 'success', offline: 'info', error: 'danger', pending_init: 'warning', disabled: 'info' }
-  return map[status] || ''
-}
 const statusLabel = (status) => {
   const map = { online: '在线', offline: '离线', error: '异常', pending_init: '待初始化', disabled: '已禁用' }
   return map[status] || status
@@ -432,7 +494,6 @@ async function handleDistribute() {
     await distributeSkillApi(distributeSkill.value.code, selectedMachines.value.map((m) => m.id), installPath.value)
     ElMessage.success(`技能分发成功，共 ${selectedMachines.value.length} 台机器`)
     distributeVisible.value = false
-    // Refresh machine list cache
     delete skillMachinesMap[distributeSkill.value.id]
     fetchData()
   } catch {
@@ -475,5 +536,50 @@ onMounted(() => {
   display: flex;
   justify-content: flex-end;
   margin-top: 16px;
+}
+.file-browser {
+  display: flex;
+  border: 1px solid #e4e7ed;
+  border-radius: 4px;
+  min-height: 400px;
+}
+.file-tree-panel {
+  width: 260px;
+  border-right: 1px solid #e4e7ed;
+  overflow-y: auto;
+  padding: 8px;
+}
+.file-content-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.file-content-header {
+  padding: 8px 12px;
+  border-bottom: 1px solid #e4e7ed;
+  font-size: 13px;
+  color: #606266;
+  font-family: monospace;
+}
+.file-content-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  color: #c0c4cc;
+  font-size: 14px;
+}
+.file-tree-node {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  font-size: 13px;
+}
+.file-size {
+  color: #909399;
+  font-size: 12px;
+  margin-left: 8px;
 }
 </style>

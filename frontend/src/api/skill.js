@@ -31,3 +31,11 @@ export function deleteSkill(id) {
 export function removeSkillFromMachine(skillId, machineId) {
   return request.delete(`/skills/${skillId}/machine/${machineId}`)
 }
+
+export function getSkillFiles(id) {
+  return request.get(`/skills/${id}/files`)
+}
+
+export function getSkillFileContent(id, path) {
+  return request.get(`/skills/${id}/files/content`, { params: { path } })
+}

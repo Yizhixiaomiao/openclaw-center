@@ -15,3 +15,11 @@ export function getMachine(id) {
 export function updateMachine(id, data) {
   return request.put(`/machines/${id}`, data)
 }
+
+export function updateMachineConfig(id, data) {
+  return request.put(`/machines/${id}/config`, data)
+}
+
+export function updateAgentConfig(id, data) {
+  return request.put(`/machines/${id}/agent-config`, data)
+}

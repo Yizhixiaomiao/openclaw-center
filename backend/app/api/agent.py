@@ -46,6 +46,7 @@ def agent_register(req: AgentRegisterRequest):
                 os=req.os,
                 agent_version=req.agent_version,
                 openclaw_version=req.openclaw_version,
+                current_user=req.current_user,
                 status="online",
                 last_heartbeat_at=datetime.now(),
             )
@@ -63,6 +64,8 @@ def agent_register(req: AgentRegisterRequest):
                 machine.agent_version = req.agent_version
             if req.openclaw_version:
                 machine.openclaw_version = req.openclaw_version
+            if req.current_user:
+                machine.current_user = req.current_user
             machine.status = "online"
             machine.last_heartbeat_at = datetime.now()
 
@@ -76,6 +79,8 @@ def agent_register(req: AgentRegisterRequest):
                 install_path="C:\\ProgramData\\OpenClawCenterAgent",
                 service_status="running",
                 last_report_at=datetime.now(),
+                agent_config_content=req.agent_config_content,
+                agent_config_path=req.agent_config_path,
             )
             db.add(agent)
         else:
@@ -83,6 +88,10 @@ def agent_register(req: AgentRegisterRequest):
             agent.last_report_at = datetime.now()
             if req.agent_version:
                 agent.agent_version = req.agent_version
+            if req.agent_config_content:
+                agent.agent_config_content = req.agent_config_content
+            if req.agent_config_path:
+                agent.agent_config_path = req.agent_config_path
 
         db.commit()
         return {"status": "ok", "machine_id": machine.id}
@@ -97,6 +106,8 @@ def agent_heartbeat(req: AgentHeartbeatRequest):
         machine = get_machine_by_code(db, req.machine_code)
         machine.status = req.status or "online"
         machine.last_heartbeat_at = datetime.now()
+        if req.current_user:
+            machine.current_user = req.current_user
         if req.cpu_usage is not None:
             machine.cpu_usage = req.cpu_usage
         if req.memory_usage is not None:
@@ -110,6 +121,10 @@ def agent_heartbeat(req: AgentHeartbeatRequest):
         if agent:
             agent.service_status = req.service_status or "running"
             agent.last_report_at = datetime.now()
+            if req.agent_config_content:
+                agent.agent_config_content = req.agent_config_content
+            if req.agent_config_path:
+                agent.agent_config_path = req.agent_config_path
 
         db.commit()
         return {"status": "ok"}
@@ -131,6 +146,8 @@ def agent_config_report(req: AgentConfigReportRequest):
             config_json=json.dumps(
                 {"skills": req.skills, "prompt_versions": req.prompt_versions}
             ),
+            config_content=req.config_content,
+            config_file_path=req.config_file_path,
         )
         db.add(config)
 

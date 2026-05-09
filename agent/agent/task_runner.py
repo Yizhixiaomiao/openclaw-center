@@ -44,7 +44,13 @@ def execute_task(config, task):
                 os.makedirs(os.path.dirname(target_path), exist_ok=True)
                 with open(target_path, "w", encoding="utf-8") as f:
                     f.write(content)
-                success, message = True, f"Config written to {target_path}"
+                # If this is the agent's own config, reload it
+                if os.path.normpath(target_path) == os.path.normpath(config.agent_config_path):
+                    config.reload()
+                    message = f"Agent config written and reloaded: {target_path}"
+                else:
+                    message = f"Config written to {target_path}"
+                success = True
             else:
                 success, message = False, "No target_path or content in config payload"
         elif task_type == "skill":

@@ -32,6 +32,7 @@
           <span v-else style="color: #ccc">-</span>
         </el-descriptions-item>
         <el-descriptions-item label="用户ID">{{ machine.user_id }}</el-descriptions-item>
+        <el-descriptions-item label="当前用户">{{ machine.current_user || '-' }}</el-descriptions-item>
         <el-descriptions-item label="状态">
           <el-tag :type="statusTagType(machine.status)">{{ statusLabel(machine.status) }}</el-tag>
         </el-descriptions-item>
@@ -46,38 +47,71 @@
       <el-tabs v-model="activeTab">
         <!-- Agent 信息 -->
         <el-tab-pane label="Agent信息" name="agent">
-          <el-descriptions :column="2" border v-if="machine.agent">
-            <el-descriptions-item label="Agent版本">{{ machine.agent.version || '-' }}</el-descriptions-item>
-            <el-descriptions-item label="服务状态">
-              <el-tag :type="machine.agent.service_status === 'running' ? 'success' : 'danger'">
-                {{ machine.agent.service_status === 'running' ? '运行中' : '已停止' }}
-              </el-tag>
-            </el-descriptions-item>
-            <el-descriptions-item label="最近上报时间">
-              {{ machine.agent.last_report_time ? formatDateTime(machine.agent.last_report_time) : '-' }}
-            </el-descriptions-item>
-          </el-descriptions>
+          <div v-if="machine.agent">
+            <el-descriptions :column="2" border style="margin-bottom: 16px">
+              <el-descriptions-item label="Agent版本">{{ machine.agent.agent_version || '-' }}</el-descriptions-item>
+              <el-descriptions-item label="服务状态">
+                <el-tag :type="machine.agent.service_status === 'running' ? 'success' : 'danger'">
+                  {{ machine.agent.service_status === 'running' ? '运行中' : '已停止' }}
+                </el-tag>
+              </el-descriptions-item>
+              <el-descriptions-item label="最近上报时间">
+                {{ machine.agent.last_report_at ? formatDateTime(machine.agent.last_report_at) : '-' }}
+              </el-descriptions-item>
+              <el-descriptions-item label="配置文件路径">{{ machine.agent.agent_config_path || '-' }}</el-descriptions-item>
+            </el-descriptions>
+            <div style="margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center">
+              <span style="font-weight: 600">Agent 配置</span>
+              <el-button type="primary" size="small" :loading="agentConfigSaving" @click="saveAgentConfig">保存并同步</el-button>
+            </div>
+            <el-input
+              v-model="agentConfigContent"
+              type="textarea"
+              :rows="16"
+              placeholder="暂无Agent配置"
+              style="font-family: monospace"
+            />
+          </div>
           <el-empty v-else description="暂无Agent信息" />
         </el-tab-pane>
 
         <!-- 配置摘要 -->
         <el-tab-pane label="配置摘要" name="config">
-          <el-descriptions :column="2" border v-if="machine.config">
-            <el-descriptions-item label="模型供应商">{{ machine.config.model_provider || '-' }}</el-descriptions-item>
-            <el-descriptions-item label="模型名称">{{ machine.config.model_name || '-' }}</el-descriptions-item>
-            <el-descriptions-item label="配置版本">{{ machine.config.config_version || '-' }}</el-descriptions-item>
-          </el-descriptions>
+          <div v-if="machine.config">
+            <el-descriptions :column="2" border style="margin-bottom: 16px">
+              <el-descriptions-item label="模型供应商">{{ machine.config.model_provider || '-' }}</el-descriptions-item>
+              <el-descriptions-item label="模型名称">{{ machine.config.model_name || '-' }}</el-descriptions-item>
+              <el-descriptions-item label="配置版本">{{ machine.config.config_version || '-' }}</el-descriptions-item>
+              <el-descriptions-item label="配置文件路径">{{ machine.config.config_file_path || '-' }}</el-descriptions-item>
+            </el-descriptions>
+            <div style="margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center">
+              <span style="font-weight: 600">配置内容</span>
+              <el-button type="primary" size="small" :loading="configSaving" @click="saveConfig">保存并同步</el-button>
+            </div>
+            <el-input
+              v-model="configContent"
+              type="textarea"
+              :rows="16"
+              placeholder="暂无配置内容"
+              style="font-family: monospace"
+            />
+          </div>
           <el-empty v-else description="暂无配置信息" />
         </el-tab-pane>
 
         <!-- 已安装技能 -->
         <el-tab-pane label="已安装技能" name="skills">
           <el-table :data="machine.skills || []" border stripe style="width: 100%">
-            <el-table-column prop="skill_id" label="技能ID" min-width="80" align="center" />
+            <el-table-column prop="name" label="技能名称" min-width="150" show-overflow-tooltip />
             <el-table-column prop="installed_version" label="安装版本" min-width="120" />
             <el-table-column prop="status" label="状态" width="120" align="center">
               <template #default="{ row }">
                 <el-tag :type="skillStatusType(row.status)">{{ skillStatusLabel(row.status) }}</el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="查看" width="80" align="center">
+              <template #default="{ row }">
+                <el-button link type="primary" size="small" @click="showSkillDetail(row)">查看</el-button>
               </template>
             </el-table-column>
           </el-table>
@@ -123,6 +157,33 @@
         </el-tab-pane>
       </el-tabs>
     </el-card>
+
+    <!-- 技能详情弹窗 -->
+    <el-dialog v-model="skillDetailVisible" title="技能详情" width="800px" destroy-on-close>
+      <div v-loading="skillDetailLoading">
+        <el-descriptions :column="2" border>
+          <el-descriptions-item label="技能ID">{{ skillDetail.id }}</el-descriptions-item>
+          <el-descriptions-item label="名称">{{ skillDetail.name }}</el-descriptions-item>
+          <el-descriptions-item label="编码">{{ skillDetail.code }}</el-descriptions-item>
+          <el-descriptions-item label="版本">{{ skillDetail.version || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="描述" :span="2">{{ skillDetail.description || '-' }}</el-descriptions-item>
+        </el-descriptions>
+
+        <h4 style="margin: 20px 0 10px">已安装机器</h4>
+        <el-table :data="skillDetailMachines" border stripe style="width: 100%">
+          <el-table-column prop="machine_code" label="机器码" min-width="160" />
+          <el-table-column prop="hostname" label="主机名" min-width="130" />
+          <el-table-column label="状态" width="100" align="center">
+            <template #default="{ row }">
+              <el-tag :type="row.status === 'installed' ? 'success' : 'info'" size="small">
+                {{ row.status === 'installed' ? '已安装' : row.status }}
+              </el-tag>
+            </template>
+          </el-table-column>
+        </el-table>
+        <el-empty v-if="skillDetailMachines.length === 0" description="暂无机器安装此技能" />
+      </div>
+    </el-dialog>
   </div>
 </template>
 
@@ -130,7 +191,9 @@
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ArrowLeft } from '@element-plus/icons-vue'
-import { getMachine } from '../../api/machine'
+import { getMachine, updateMachineConfig, updateAgentConfig } from '../../api/machine'
+import { getSkillDetail } from '../../api/skill'
+import { ElMessage } from 'element-plus'
 
 const route = useRoute()
 const router = useRouter()
@@ -187,10 +250,78 @@ async function loadData() {
   try {
     const res = await getMachine(machineId)
     machine.value = res.data || res
+    if (machine.value.config?.config_content) {
+      configContent.value = machine.value.config.config_content
+    }
+    if (machine.value.agent?.agent_config_content) {
+      agentConfigContent.value = machine.value.agent.agent_config_content
+    }
   } catch {
     // 已由拦截器处理
   } finally {
     loading.value = false
+  }
+}
+
+// ---------- 配置编辑 ----------
+const configContent = ref('')
+const configSaving = ref(false)
+
+async function saveConfig() {
+  try {
+    JSON.parse(configContent.value)
+  } catch {
+    ElMessage.error('配置内容不是有效的 JSON 格式')
+    return
+  }
+  configSaving.value = true
+  try {
+    await updateMachineConfig(machineId, { config_content: configContent.value })
+    ElMessage.success('配置已保存，同步任务已下发')
+    loadData()
+  } catch {
+    // handled by interceptor
+  } finally {
+    configSaving.value = false
+  }
+}
+
+// ---------- Agent 配置编辑 ----------
+const agentConfigContent = ref('')
+const agentConfigSaving = ref(false)
+
+async function saveAgentConfig() {
+  agentConfigSaving.value = true
+  try {
+    await updateAgentConfig(machineId, { agent_config_content: agentConfigContent.value })
+    ElMessage.success('Agent配置已保存，同步任务已下发')
+    loadData()
+  } catch {
+    // handled by interceptor
+  } finally {
+    agentConfigSaving.value = false
+  }
+}
+
+// ---------- 技能详情弹窗 ----------
+const skillDetailVisible = ref(false)
+const skillDetailLoading = ref(false)
+const skillDetail = ref({})
+const skillDetailMachines = ref([])
+
+async function showSkillDetail(row) {
+  skillDetailVisible.value = true
+  skillDetailLoading.value = true
+  skillDetail.value = {}
+  skillDetailMachines.value = []
+  try {
+    const res = await getSkillDetail(row.skill_id)
+    skillDetail.value = res.skill || {}
+    skillDetailMachines.value = res.machines || []
+  } catch {
+    // handled by interceptor
+  } finally {
+    skillDetailLoading.value = false
   }
 }
 

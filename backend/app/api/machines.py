@@ -2,13 +2,16 @@ from fastapi import APIRouter, HTTPException, Depends, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import func as sa_func
 from typing import Optional, List
+from datetime import datetime
+import json
+import hashlib
 from app.utils.deps import get_db, get_current_user, require_role
 from app.models.user import User
 from app.models.machine import Machine, AgentInfo, OpenClawConfig
 from app.models.skill import MachineSkill, Skill
 from app.models.log import AgentLog
-from app.models.deploy import DeployTaskItem
-from app.schemas.machine import MachineCreate, MachineUpdate, MachineResponse
+from app.models.deploy import DeployTask, DeployTaskItem
+from app.schemas.machine import MachineCreate, MachineUpdate, MachineResponse, ConfigUpdateRequest, AgentConfigUpdateRequest
 
 router = APIRouter()
 
@@ -20,7 +23,7 @@ def list_machines(
     user_id: Optional[int] = None,
     keyword: Optional[str] = None,
     skip: int = Query(0, ge=0),
-    limit: int = Query(20, ge=1, le=100),
+    limit: int = Query(20, ge=1, le=200),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -116,6 +119,8 @@ def get_machine(
             "agent_version": agent_info.agent_version,
             "service_status": agent_info.service_status,
             "last_report_at": str(agent_info.last_report_at),
+            "agent_config_content": agent_info.agent_config_content,
+            "agent_config_path": agent_info.agent_config_path,
         }
         if agent_info
         else None,
@@ -123,6 +128,8 @@ def get_machine(
             "config_version": latest_config.config_version,
             "model_provider": latest_config.model_provider,
             "model_name": latest_config.model_name,
+            "config_content": latest_config.config_content,
+            "config_file_path": latest_config.config_file_path,
         }
         if latest_config
         else None,
@@ -174,3 +181,118 @@ def update_machine(
     db.commit()
     db.refresh(machine)
     return machine
+
+
+@router.put("/{machine_id}/config")
+def update_machine_config(
+    machine_id: int,
+    req: ConfigUpdateRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role("admin", "ops")),
+):
+    machine = db.query(Machine).filter(Machine.id == machine_id).first()
+    if not machine:
+        raise HTTPException(status_code=404, detail="Machine not found")
+
+    latest_config = (
+        db.query(OpenClawConfig)
+        .filter(OpenClawConfig.machine_id == machine_id)
+        .order_by(OpenClawConfig.created_at.desc())
+        .first()
+    )
+
+    # Parse new config content for model info
+    model_provider = ""
+    model_name = ""
+    try:
+        data = json.loads(req.config_content)
+        model_provider = data.get("model_provider", data.get("provider", ""))
+        model_name = data.get("model_name", data.get("model", ""))
+    except (json.JSONDecodeError, TypeError):
+        pass
+
+    config_version = hashlib.md5(req.config_content.encode()).hexdigest()
+
+    # Create new config record with updated content
+    new_config = OpenClawConfig(
+        machine_id=machine_id,
+        config_version=config_version,
+        model_provider=model_provider,
+        model_name=model_name,
+        config_content=req.config_content,
+        config_file_path=latest_config.config_file_path if latest_config else None,
+        config_json=latest_config.config_json if latest_config else "{}",
+    )
+    db.add(new_config)
+
+    # Create deploy task to sync config to agent machine
+    config_file_path = latest_config.config_file_path if latest_config else None
+    if config_file_path:
+        payload = json.dumps({
+            "target_path": config_file_path,
+            "content": req.config_content,
+        })
+        task = DeployTask(
+            task_type="config",
+            target_type="machine",
+            target_id=str(machine_id),
+            payload_json=payload,
+            status="pending",
+            created_by=current_user.id,
+        )
+        db.add(task)
+        db.flush()
+        task_item = DeployTaskItem(
+            task_id=task.id,
+            machine_id=machine_id,
+            status="pending",
+        )
+        db.add(task_item)
+
+    db.commit()
+    return {"status": "ok", "message": "配置已保存" + ("，同步任务已创建" if config_file_path else "")}
+
+
+@router.put("/{machine_id}/agent-config")
+def update_agent_config(
+    machine_id: int,
+    req: AgentConfigUpdateRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role("admin", "ops")),
+):
+    machine = db.query(Machine).filter(Machine.id == machine_id).first()
+    if not machine:
+        raise HTTPException(status_code=404, detail="Machine not found")
+
+    agent = db.query(AgentInfo).filter(AgentInfo.machine_id == machine_id).first()
+    if not agent:
+        raise HTTPException(status_code=404, detail="Agent not found")
+
+    agent.agent_config_content = req.agent_config_content
+
+    # Create deploy task to sync agent config
+    config_path = agent.agent_config_path
+    if config_path:
+        payload = json.dumps({
+            "target_path": config_path,
+            "content": req.agent_config_content,
+        })
+        task = DeployTask(
+            task_type="config",
+            target_type="machine",
+            target_id=str(machine_id),
+            payload_json=payload,
+            status="pending",
+            created_by=current_user.id,
+        )
+        db.add(task)
+        db.flush()
+        task_item = DeployTaskItem(
+            task_id=task.id,
+            machine_id=machine_id,
+            status="pending",
+        )
+        db.add(task_item)
+
+    db.commit()
+    return {"status": "ok", "message": "Agent配置已保存" + ("，同步任务已创建" if config_path else "")}
