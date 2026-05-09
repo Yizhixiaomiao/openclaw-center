@@ -2,6 +2,11 @@ from fastapi import APIRouter, HTTPException, Depends, Header
 from sqlalchemy.orm import Session
 from datetime import datetime
 import json
+import os
+import base64
+import zipfile
+import io
+from app.config import settings
 from app.database import SessionLocal
 from app.models.machine import Machine, AgentInfo, OpenClawConfig
 from app.models.skill import MachineSkill, Skill
@@ -15,6 +20,7 @@ from app.schemas.machine import (
     AgentTaskReportRequest,
     AgentLogReportRequest,
     AgentUsageReportRequest,
+    AgentSkillSyncRequest,
 )
 
 router = APIRouter()
@@ -47,7 +53,9 @@ def agent_register(req: AgentRegisterRequest):
             db.commit()
             db.refresh(machine)
         else:
-            machine.hostname = req.hostname
+            # Only update fields that the agent knows about; preserve manually set hostname
+            if not machine.hostname:
+                machine.hostname = req.hostname
             machine.ip = req.ip
             if req.os:
                 machine.os = req.os
@@ -89,6 +97,12 @@ def agent_heartbeat(req: AgentHeartbeatRequest):
         machine = get_machine_by_code(db, req.machine_code)
         machine.status = req.status or "online"
         machine.last_heartbeat_at = datetime.now()
+        if req.cpu_usage is not None:
+            machine.cpu_usage = req.cpu_usage
+        if req.memory_usage is not None:
+            machine.memory_usage = req.memory_usage
+        if req.disk_usage is not None:
+            machine.disk_usage = req.disk_usage
 
         agent = (
             db.query(AgentInfo).filter(AgentInfo.machine_id == machine.id).first()
@@ -120,7 +134,7 @@ def agent_config_report(req: AgentConfigReportRequest):
         )
         db.add(config)
 
-        # Update machine skills
+        # Update machine skills (metadata only)
         if req.skills:
             try:
                 skills_data = json.loads(req.skills)
@@ -128,20 +142,105 @@ def agent_config_report(req: AgentConfigReportRequest):
                     MachineSkill.machine_id == machine.id
                 ).delete()
                 for s in skills_data if isinstance(skills_data, list) else []:
-                    skill = db.query(Skill).filter(Skill.code == s.get("code")).first()
-                    if skill:
-                        ms = MachineSkill(
-                            machine_id=machine.id,
-                            skill_id=skill.id,
-                            installed_version=s.get("version"),
-                            status="installed",
+                    code = s.get("code")
+                    if not code:
+                        continue
+                    skill = db.query(Skill).filter(Skill.code == code).first()
+                    if not skill:
+                        # Auto-register skill from agent report
+                        skill = Skill(
+                            name=code,
+                            code=code,
+                            version=s.get("version", ""),
+                            status="published",
+                            audit_status="approved",
                         )
-                        db.add(ms)
+                        db.add(skill)
+                        db.flush()
+                    ms = MachineSkill(
+                        machine_id=machine.id,
+                        skill_id=skill.id,
+                        installed_version=s.get("version"),
+                        status="installed",
+                    )
+                    db.add(ms)
             except (json.JSONDecodeError, TypeError):
                 pass
 
         db.commit()
         return {"status": "ok"}
+    finally:
+        db.close()
+
+
+@router.post("/skills/sync")
+def agent_skills_sync(req: AgentSkillSyncRequest):
+    db = SessionLocal()
+    try:
+        machine = get_machine_by_code(db, req.machine_code)
+        skills_dir = os.path.join(settings.UPLOAD_DIR, "skills")
+        os.makedirs(skills_dir, exist_ok=True)
+
+        skills_data = json.loads(req.skills)
+        uploaded = 0
+        for s in skills_data if isinstance(skills_data, list) else []:
+            code = s.get("code")
+            if not code:
+                continue
+
+            # Extract skill package to uploads/skills/{code}/
+            skill_dir = os.path.join(skills_dir, code)
+            os.makedirs(skill_dir, exist_ok=True)
+
+            zip_data = base64.b64decode(s.get("zip_base64", ""))
+            zip_path = os.path.join(skill_dir, "package.zip")
+            with open(zip_path, "wb") as f:
+                f.write(zip_data)
+
+            with zipfile.ZipFile(io.BytesIO(zip_data)) as zf:
+                zf.extractall(skill_dir)
+
+            # Register/update skill in DB
+            skill = db.query(Skill).filter(Skill.code == code).first()
+            if not skill:
+                skill = Skill(
+                    name=s.get("name", code),
+                    code=code,
+                    version=s.get("version", ""),
+                    description=s.get("description", ""),
+                    package_url=f"/api/skills/{code}/download",
+                    checksum=s.get("checksum", ""),
+                    audit_status="approved",
+                    status="published",
+                )
+                db.add(skill)
+                db.flush()
+            else:
+                skill.name = s.get("name", skill.name)
+                skill.version = s.get("version", skill.version)
+                skill.description = s.get("description", skill.description)
+                skill.checksum = s.get("checksum", skill.checksum)
+                skill.package_url = f"/api/skills/{code}/download"
+                if skill.audit_status == "pending":
+                    skill.audit_status = "approved"
+                    skill.status = "published"
+
+            # Link skill to this machine
+            db.query(MachineSkill).filter(
+                MachineSkill.machine_id == machine.id,
+                MachineSkill.skill_id == skill.id,
+            ).delete()
+            ms = MachineSkill(
+                machine_id=machine.id,
+                skill_id=skill.id,
+                installed_version=s.get("version"),
+                status="installed",
+            )
+            db.add(ms)
+            uploaded += 1
+
+        db.commit()
+        return {"status": "ok", "uploaded": uploaded}
     finally:
         db.close()
 

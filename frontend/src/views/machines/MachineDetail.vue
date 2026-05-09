@@ -19,6 +19,18 @@
         <el-descriptions-item label="系统">{{ machine.os }}</el-descriptions-item>
         <el-descriptions-item label="CPU">{{ machine.cpu }}</el-descriptions-item>
         <el-descriptions-item label="内存">{{ machine.memory }}</el-descriptions-item>
+        <el-descriptions-item label="CPU使用率">
+          <span v-if="machine.cpu_usage != null">{{ machine.cpu_usage.toFixed(1) }}%</span>
+          <span v-else style="color: #ccc">-</span>
+        </el-descriptions-item>
+        <el-descriptions-item label="内存使用率">
+          <span v-if="machine.memory_usage != null">{{ machine.memory_usage.toFixed(1) }}%</span>
+          <span v-else style="color: #ccc">-</span>
+        </el-descriptions-item>
+        <el-descriptions-item label="磁盘使用率">
+          <span v-if="machine.disk_usage != null">{{ machine.disk_usage.toFixed(1) }}%</span>
+          <span v-else style="color: #ccc">-</span>
+        </el-descriptions-item>
         <el-descriptions-item label="用户ID">{{ machine.user_id }}</el-descriptions-item>
         <el-descriptions-item label="状态">
           <el-tag :type="statusTagType(machine.status)">{{ statusLabel(machine.status) }}</el-tag>

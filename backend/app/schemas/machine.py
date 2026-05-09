@@ -51,6 +51,10 @@ class MachineResponse(BaseModel):
     openclaw_version: Optional[str] = None
     agent_version: Optional[str] = None
     status: str
+    cpu_usage: Optional[float] = None
+    memory_usage: Optional[float] = None
+    disk_usage: Optional[float] = None
+    skills_count: Optional[int] = 0
     last_heartbeat_at: Optional[datetime] = None
     created_at: Optional[datetime] = None
 
@@ -106,3 +110,8 @@ class AgentUsageReportRequest(BaseModel):
     calls: int = 0
     tokens: int = 0
     timestamp: Optional[str] = None
+
+
+class AgentSkillSyncRequest(BaseModel):
+    machine_code: str
+    skills: str  # JSON string of skill packages (code, name, version, description, zip_base64, checksum, file_count, total_size)

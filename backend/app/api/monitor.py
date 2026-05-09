@@ -36,6 +36,9 @@ def monitor_machines(
                 "is_online": is_online,
                 "user_id": m.user_id,
                 "department": m.department,
+                "cpu_usage": m.cpu_usage,
+                "memory_usage": m.memory_usage,
+                "disk_usage": m.disk_usage,
                 "last_heartbeat_at": str(m.last_heartbeat_at)
                 if m.last_heartbeat_at
                 else None,

@@ -1,10 +1,11 @@
 from fastapi import APIRouter, HTTPException, Depends, Query
 from sqlalchemy.orm import Session
+from sqlalchemy import func as sa_func
 from typing import Optional, List
 from app.utils.deps import get_db, get_current_user, require_role
 from app.models.user import User
 from app.models.machine import Machine, AgentInfo, OpenClawConfig
-from app.models.skill import MachineSkill
+from app.models.skill import MachineSkill, Skill
 from app.models.log import AgentLog
 from app.models.deploy import DeployTaskItem
 from app.schemas.machine import MachineCreate, MachineUpdate, MachineResponse
@@ -36,7 +37,24 @@ def list_machines(
             | (Machine.code.contains(keyword))
             | (Machine.ip.contains(keyword))
         )
-    return q.offset(skip).limit(limit).all()
+    machines = q.offset(skip).limit(limit).all()
+    # Attach skills count
+    machine_ids = [m.id for m in machines]
+    if machine_ids:
+        skills_counts = (
+            db.query(MachineSkill.machine_id, sa_func.count(MachineSkill.id))
+            .filter(MachineSkill.machine_id.in_(machine_ids))
+            .group_by(MachineSkill.machine_id)
+            .all()
+        )
+        skills_map = {mid: cnt for mid, cnt in skills_counts}
+        result = []
+        for m in machines:
+            data = MachineResponse.model_validate(m).model_dump()
+            data["skills_count"] = skills_map.get(m.id, 0)
+            result.append(data)
+        return result
+    return [MachineResponse.model_validate(m).model_dump() for m in machines]
 
 
 @router.post("", response_model=MachineResponse, status_code=201)
@@ -72,8 +90,11 @@ def get_machine(
         .order_by(OpenClawConfig.created_at.desc())
         .first()
     )
-    skills = (
-        db.query(MachineSkill).filter(MachineSkill.machine_id == machine_id).all()
+    skill_rows = (
+        db.query(MachineSkill, Skill.name, Skill.code)
+        .outerjoin(Skill, MachineSkill.skill_id == Skill.id)
+        .filter(MachineSkill.machine_id == machine_id)
+        .all()
     )
     recent_logs = (
         db.query(AgentLog)
@@ -107,11 +128,14 @@ def get_machine(
         else None,
         "skills": [
             {
-                "skill_id": s.skill_id,
-                "installed_version": s.installed_version,
-                "status": s.status,
+                "id": s.MachineSkill.id,
+                "skill_id": s.MachineSkill.skill_id,
+                "name": s.name or s.code or f"Skill-{s.skill_id}",
+                "code": s.code or "",
+                "installed_version": s.MachineSkill.installed_version,
+                "status": s.MachineSkill.status,
             }
-            for s in skills
+            for s in skill_rows
         ],
         "recent_logs": [
             {

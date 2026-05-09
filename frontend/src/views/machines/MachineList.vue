@@ -32,7 +32,31 @@
         <el-table-column prop="os" label="系统" width="100" align="center" />
         <el-table-column prop="cpu" label="CPU" width="80" align="center" />
         <el-table-column prop="memory" label="内存" width="80" align="center" />
+        <el-table-column label="CPU使用率" width="100" align="center">
+          <template #default="{ row }">
+            <span v-if="row.cpu_usage != null">{{ row.cpu_usage.toFixed(1) }}%</span>
+            <span v-else style="color: #ccc">-</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="内存使用率" width="110" align="center">
+          <template #default="{ row }">
+            <span v-if="row.memory_usage != null">{{ row.memory_usage.toFixed(1) }}%</span>
+            <span v-else style="color: #ccc">-</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="磁盘使用率" width="110" align="center">
+          <template #default="{ row }">
+            <span v-if="row.disk_usage != null">{{ row.disk_usage.toFixed(1) }}%</span>
+            <span v-else style="color: #ccc">-</span>
+          </template>
+        </el-table-column>
         <el-table-column prop="user_id" label="用户ID" width="80" align="center" />
+        <el-table-column prop="skills_count" label="已安装技能" width="100" align="center">
+          <template #default="{ row }">
+            <el-tag v-if="row.skills_count" type="primary" size="small">{{ row.skills_count }} 个</el-tag>
+            <span v-else style="color: #ccc">0</span>
+          </template>
+        </el-table-column>
         <el-table-column prop="status" label="状态" width="100" align="center">
           <template #default="{ row }">
             <el-tag :type="statusTagType(row.status)">{{ statusLabel(row.status) }}</el-tag>

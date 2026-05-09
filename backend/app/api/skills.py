@@ -1,8 +1,12 @@
 from fastapi import APIRouter, HTTPException, Depends, Query
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from typing import Optional, List
+import os
+from app.config import settings
 from app.utils.deps import get_db, get_current_user, require_role
 from app.models.user import User
+from app.models.machine import Machine
 from app.models.skill import Skill, MachineSkill
 from app.schemas.skill import SkillCreate, SkillUpdate, SkillResponse, MachineSkillResponse
 
@@ -103,3 +107,88 @@ def list_machine_skills(
     current_user: User = Depends(get_current_user),
 ):
     return db.query(MachineSkill).filter(MachineSkill.machine_id == machine_id).all()
+
+
+@router.get("/{skill_code}/download")
+def download_skill(
+    skill_code: str,
+    current_user: User = Depends(get_current_user),
+):
+    skill_dir = os.path.join(settings.UPLOAD_DIR, "skills", skill_code)
+    zip_path = os.path.join(skill_dir, "package.zip")
+    if not os.path.exists(zip_path):
+        raise HTTPException(status_code=404, detail="Skill package not found")
+    return FileResponse(zip_path, filename=f"{skill_code}.zip", media_type="application/zip")
+
+
+@router.get("/detail/{skill_id}")
+def get_skill_detail(
+    skill_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    skill = db.query(Skill).filter(Skill.id == skill_id).first()
+    if not skill:
+        raise HTTPException(status_code=404, detail="Skill not found")
+    # Get machines that have this skill installed
+    ms_records = (
+        db.query(MachineSkill, Machine.code, Machine.hostname)
+        .join(Machine, MachineSkill.machine_id == Machine.id)
+        .filter(MachineSkill.skill_id == skill_id)
+        .all()
+    )
+    machines = [
+        {
+            "machine_id": m.MachineSkill.machine_id,
+            "machine_code": m.code,
+            "hostname": m.hostname,
+            "status": m.MachineSkill.status,
+            "installed_version": m.MachineSkill.installed_version,
+            "installed_at": str(m.MachineSkill.installed_at) if m.MachineSkill.installed_at else None,
+        }
+        for m in ms_records
+    ]
+    return {
+        "skill": SkillResponse.model_validate(skill).model_dump(),
+        "machines": machines,
+    }
+
+
+@router.delete("/{skill_id}/machine/{machine_id}")
+def remove_skill_from_machine(
+    skill_id: int,
+    machine_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role("admin", "support")),
+):
+    ms = (
+        db.query(MachineSkill)
+        .filter(MachineSkill.skill_id == skill_id, MachineSkill.machine_id == machine_id)
+        .first()
+    )
+    if not ms:
+        raise HTTPException(status_code=404, detail="Skill not installed on this machine")
+    db.delete(ms)
+    db.commit()
+    return {"status": "ok", "message": "Skill removed from machine"}
+
+
+@router.delete("/{skill_id}")
+def delete_skill(
+    skill_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role("admin")),
+):
+    skill = db.query(Skill).filter(Skill.id == skill_id).first()
+    if not skill:
+        raise HTTPException(status_code=404, detail="Skill not found")
+    # Remove machine associations
+    db.query(MachineSkill).filter(MachineSkill.skill_id == skill_id).delete()
+    # Remove uploaded files
+    skill_dir = os.path.join(settings.UPLOAD_DIR, "skills", skill.code)
+    if os.path.exists(skill_dir):
+        import shutil
+        shutil.rmtree(skill_dir)
+    db.delete(skill)
+    db.commit()
+    return {"status": "ok", "message": f"Skill '{skill.code}' deleted"}

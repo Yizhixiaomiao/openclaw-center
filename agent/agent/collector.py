@@ -2,6 +2,10 @@ import os
 import json
 import platform
 import subprocess
+import zipfile
+import io
+import base64
+import hashlib
 import requests
 from agent.logger import setup_logger
 
@@ -51,12 +55,13 @@ def get_openclaw_config(config):
     config_path = config.openclaw_config_path
     if not config_path or not os.path.exists(config_path):
         return result
+    if os.path.isdir(config_path):
+        logger.debug("OpenClaw config path is a directory, skipping: %s", config_path)
+        return result
     try:
         with open(config_path, "r", encoding="utf-8") as f:
             content = f.read()
-        import hashlib
         result["openclaw_config_hash"] = hashlib.md5(content.encode()).hexdigest()
-        # Try to parse as JSON or YAML for model info
         try:
             data = json.loads(content)
             result["model_provider"] = data.get("model_provider", data.get("provider", ""))
@@ -68,8 +73,30 @@ def get_openclaw_config(config):
     return result
 
 
+def package_skill_folder(skill_path):
+    """Package an entire skill folder into a base64-encoded zip."""
+    zip_buffer = io.BytesIO()
+    file_count = 0
+    total_size = 0
+    with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zf:
+        for root, dirs, files in os.walk(skill_path):
+            for fname in files:
+                fpath = os.path.join(root, fname)
+                arcname = os.path.relpath(fpath, skill_path)
+                zf.write(fpath, arcname)
+                file_count += 1
+                total_size += os.path.getsize(fpath)
+    zip_data = zip_buffer.getvalue()
+    return {
+        "zip_base64": base64.b64encode(zip_data).decode("utf-8"),
+        "checksum": hashlib.sha256(zip_data).hexdigest(),
+        "file_count": file_count,
+        "total_size": total_size,
+    }
+
+
 def get_installed_skills(config):
-    """Scan skills directory for installed skills."""
+    """Scan skills directory and return full skill info with packaged content."""
     skills = []
     skills_dir = config.openclaw_skills_dir
     if not skills_dir or not os.path.isdir(skills_dir):
@@ -78,19 +105,62 @@ def get_installed_skills(config):
         for name in os.listdir(skills_dir):
             skill_path = os.path.join(skills_dir, name)
             if os.path.isdir(skill_path):
+                # Read manifest for metadata
                 version = ""
+                skill_name = name
+                description = ""
                 manifest = os.path.join(skill_path, "manifest.json")
                 if os.path.exists(manifest):
                     try:
                         with open(manifest, "r", encoding="utf-8") as f:
                             data = json.load(f)
+                            skill_name = data.get("name", name)
                             version = data.get("version", "")
+                            description = data.get("description", "")
                     except Exception:
                         pass
-                skills.append({"code": name, "version": version})
+
+                # Package entire folder as base64 zip
+                pkg = package_skill_folder(skill_path)
+                skills.append({
+                    "code": name,
+                    "name": skill_name,
+                    "version": version,
+                    "description": description,
+                    "file_count": pkg["file_count"],
+                    "total_size": pkg["total_size"],
+                    "zip_base64": pkg["zip_base64"],
+                    "checksum": pkg["checksum"],
+                })
     except Exception as e:
         logger.warning("Failed to scan skills: %s", e)
     return skills
+
+
+def sync_skills(config):
+    """Report full skill packages to center server."""
+    skills = get_installed_skills(config)
+    if not skills:
+        logger.info("No skills found to sync")
+        return
+    # Skip metadata-only skills for the full sync
+    pkg_skills = [s for s in skills if s.get("file_count", 0) > 0]
+    if not pkg_skills:
+        logger.info("No skill packages to sync (all empty)")
+        return
+
+    url = f"{config.center_url}/api/agent/skills/sync"
+    payload = {
+        "machine_code": config.machine_code,
+        "skills": json.dumps(pkg_skills),
+    }
+    try:
+        resp = requests.post(url, json=payload, timeout=300)
+        resp.raise_for_status()
+        data = resp.json()
+        logger.info("Skills synced: %d packages uploaded", data.get("uploaded", 0))
+    except requests.RequestException as e:
+        logger.warning("Skills sync failed: %s", e)
 
 
 def report_resources(config):
@@ -115,16 +185,18 @@ def report_resources(config):
 
 
 def report_config(config):
-    """Report OpenClaw config and skills to center."""
+    """Report OpenClaw config and skills metadata to center."""
     url = f"{config.center_url}/api/agent/config/report"
     oc_config = get_openclaw_config(config)
     skills = get_installed_skills(config)
+    # Send only lightweight metadata in config report
+    meta_skills = [{"code": s["code"], "version": s.get("version", "")} for s in skills]
     payload = {
         "machine_code": config.machine_code,
         "openclaw_config_hash": oc_config["openclaw_config_hash"],
         "model_provider": oc_config["model_provider"],
         "model_name": oc_config["model_name"],
-        "skills": json.dumps(skills),
+        "skills": json.dumps(meta_skills),
     }
     try:
         resp = requests.post(url, json=payload, timeout=15)
@@ -142,7 +214,14 @@ def resource_loop(config, stop_event):
 
 
 def config_loop(config, stop_event):
-    """Periodically report OpenClaw config and skills."""
+    """Periodically report OpenClaw config and skills metadata."""
     while not stop_event.is_set():
         report_config(config)
+        stop_event.wait(config.config_interval)
+
+
+def skills_loop(config, stop_event):
+    """Periodically sync full skill packages to center."""
+    while not stop_event.is_set():
+        sync_skills(config)
         stop_event.wait(config.config_interval)

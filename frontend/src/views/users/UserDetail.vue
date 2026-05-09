@@ -110,6 +110,13 @@
             <el-table-column prop="code" label="机器码" min-width="160" />
             <el-table-column prop="hostname" label="主机名" min-width="130" />
             <el-table-column prop="ip" label="IP" width="140" />
+            <el-table-column label="资源" width="220">
+              <template #default="{ row }">
+                <span>CPU: {{ row.cpu_usage != null ? row.cpu_usage.toFixed(0) + '%' : '-' }}</span>
+                <span style="margin-left: 8px">MEM: {{ row.memory_usage != null ? row.memory_usage.toFixed(0) + '%' : '-' }}</span>
+                <span style="margin-left: 8px">DISK: {{ row.disk_usage != null ? row.disk_usage.toFixed(0) + '%' : '-' }}</span>
+              </template>
+            </el-table-column>
             <el-table-column prop="status" label="状态" width="100" align="center">
               <template #default="{ row }">
                 <el-tag :type="machineStatusType(row.status)">{{ machineStatusLabel(row.status) }}</el-tag>

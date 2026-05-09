@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime, Enum, ForeignKey, func
+from sqlalchemy import Column, Integer, String, Text, DateTime, Enum, Float, ForeignKey, func
 
 from app.database import Base
 
@@ -21,6 +21,9 @@ class Machine(Base):
     openclaw_version = Column(String(64))
     agent_version = Column(String(64))
     status = Column(Enum("online", "offline", "error", "pending_init", "disabled"), default="pending_init")
+    cpu_usage = Column(Float, nullable=True)
+    memory_usage = Column(Float, nullable=True)
+    disk_usage = Column(Float, nullable=True)
     last_heartbeat_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())

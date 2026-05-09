@@ -16,6 +16,8 @@ PyInstaller.__main__.run([
     "--hidden-import=agent.task_runner",
     "--hidden-import=agent.prompt_sync",
     "--hidden-import=agent.logger",
+    "--hidden-import=yaml",
+    "--hidden-import=psutil",
     f"--distpath={os.path.join(script_dir, 'dist')}",
     f"--workpath={os.path.join(script_dir, 'build')}",
     f"--specpath={script_dir}",

@@ -5,7 +5,7 @@ from agent.config import AgentConfig
 from agent.logger import setup_logger
 from agent.register import register_agent
 from agent.heartbeat import heartbeat_loop
-from agent.collector import resource_loop, config_loop
+from agent.collector import resource_loop, config_loop, skills_loop
 from agent.task_runner import task_loop
 
 logger = setup_logger("main")
@@ -64,6 +64,7 @@ def main():
         threading.Thread(target=heartbeat_loop, args=(config, stop_event), name="heartbeat", daemon=True),
         threading.Thread(target=resource_loop, args=(config, stop_event), name="resource", daemon=True),
         threading.Thread(target=config_loop, args=(config, stop_event), name="config", daemon=True),
+        threading.Thread(target=skills_loop, args=(config, stop_event), name="skills", daemon=True),
         threading.Thread(target=task_loop, args=(config, stop_event), name="task", daemon=True),
     ]
 
@@ -79,4 +80,20 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as e:
+        import traceback, sys
+        # 确保错误可见：打印到控制台
+        print(f"FATAL ERROR: {e}")
+        traceback.print_exc(file=sys.stderr)
+        # 同时写入错误文件便于远程排查
+        try:
+            os.makedirs(r"C:\ProgramData\OpenClawCenterAgent\logs", exist_ok=True)
+            with open(r"C:\ProgramData\OpenClawCenterAgent\logs\error.log", "w", encoding="utf-8") as f:
+                f.write(f"FATAL ERROR: {e}\n")
+                traceback.print_exc(file=f)
+        except Exception:
+            pass
+        input("Press Enter to exit...")  # 防止闪退
+        sys.exit(1)

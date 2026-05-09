@@ -74,6 +74,16 @@
         </el-table-column>
         <el-table-column prop="department" label="部门" width="120" show-overflow-tooltip />
         <el-table-column prop="user_id" label="用户ID" width="100" align="center" />
+        <el-table-column label="资源使用率" width="240">
+          <template #default="{ row }">
+            <span v-if="row.cpu_usage != null">CPU {{ row.cpu_usage.toFixed(0) }}% </span>
+            <span v-else style="color:#ccc">CPU - </span>
+            <span v-if="row.memory_usage != null">MEM {{ row.memory_usage.toFixed(0) }}% </span>
+            <span v-else style="color:#ccc">MEM - </span>
+            <span v-if="row.disk_usage != null">DISK {{ row.disk_usage.toFixed(0) }}%</span>
+            <span v-else style="color:#ccc">DISK -</span>
+          </template>
+        </el-table-column>
         <el-table-column prop="last_heartbeat" label="最近心跳" width="170" align="center">
           <template #default="{ row }">
             {{ formatTime(row.last_heartbeat) }}

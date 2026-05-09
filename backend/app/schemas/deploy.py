@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, List
 from pydantic import BaseModel
 from datetime import datetime
 
@@ -8,6 +8,12 @@ class DeployTaskCreate(BaseModel):
     target_type: str  # machine, user, department, position
     target_id: str
     payload_json: str
+
+
+class SkillDistributeRequest(BaseModel):
+    skill_code: str
+    machine_ids: List[int]
+    install_path: str = "C:\\OpenClaw\\skills"
 
 
 class DeployTaskResponse(BaseModel):
