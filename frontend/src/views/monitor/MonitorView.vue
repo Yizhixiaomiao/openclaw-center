@@ -236,7 +236,7 @@ async function loadMachines() {
   machinesLoading.value = true
   try {
     const res = await getMonitorMachines()
-    machines.value = res.items || res.data || res || []
+    machines.value = Array.isArray(res) ? res : (res.items || res.data || [])
   } catch {
     // error handled by interceptor
   } finally {
@@ -252,7 +252,7 @@ async function loadAlerts() {
   alertsLoading.value = true
   try {
     const res = await getMonitorAlerts()
-    alerts.value = res.items || res.data || res || []
+    alerts.value = Array.isArray(res) ? res : (res.items || res.data || [])
   } catch {
     // error handled by interceptor
   } finally {
@@ -280,15 +280,15 @@ async function loadLogs() {
   logsLoading.value = true
   try {
     const params = {
-      page: logPagination.page,
-      size: logPagination.size,
+      skip: (logPagination.page - 1) * logPagination.size,
+      limit: logPagination.size,
       ...logFilters,
     }
     Object.keys(params).forEach((key) => {
       if (params[key] === '' || params[key] == null) delete params[key]
     })
     const res = await getMonitorLogs(params)
-    logs.value = res.items || res.data || []
+    logs.value = Array.isArray(res) ? res : (res.items || res.data || [])
     logPagination.total = res.total || logs.value.length
   } catch {
     // error handled by interceptor

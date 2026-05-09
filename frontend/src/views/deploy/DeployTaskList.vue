@@ -259,15 +259,15 @@ async function loadTasks() {
   listLoading.value = true
   try {
     const params = {
-      page: pagination.page,
-      size: pagination.size,
+      skip: (pagination.page - 1) * pagination.size,
+      limit: pagination.size,
       ...filters,
     }
     Object.keys(params).forEach((key) => {
       if (params[key] === '' || params[key] == null) delete params[key]
     })
     const res = await getDeployTasks(params)
-    tasks.value = res.items || res.data || []
+    tasks.value = Array.isArray(res) ? res : (res.items || res.data || [])
     pagination.total = res.total || tasks.value.length
   } catch {
     // error handled by interceptor

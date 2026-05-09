@@ -254,7 +254,7 @@ async function loadProfile() {
 async function loadScenarios() {
   try {
     const res = await getUserScenarios(userId)
-    scenarios.value = res.items || res.data || res || []
+    scenarios.value = Array.isArray(res) ? res : (res.items || res.data || [])
   } catch {
     // 静默
   }
@@ -263,7 +263,7 @@ async function loadScenarios() {
 async function loadMachines() {
   try {
     const res = await getMachines({ user_id: userId })
-    machines.value = res.items || res.data || res || []
+    machines.value = Array.isArray(res) ? res : (res.items || res.data || [])
   } catch {
     // 静默
   }

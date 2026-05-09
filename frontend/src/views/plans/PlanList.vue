@@ -358,11 +358,11 @@ async function loadPlans() {
   loading.value = true
   try {
     const params = {
-      page: pagination.page,
-      size: pagination.size,
+      skip: (pagination.page - 1) * pagination.size,
+      limit: pagination.size,
     }
     const res = await getPlans(params)
-    plans.value = res.items || res.data || []
+    plans.value = Array.isArray(res) ? res : (res.items || res.data || [])
     pagination.total = res.total || plans.value.length
   } catch {
     // error handled by interceptor
@@ -436,7 +436,7 @@ async function showDetailDialog(row) {
 async function loadBindings(planId) {
   try {
     const res = await getPlanBindings(planId)
-    bindings.value = res.items || res.data || res || []
+    bindings.value = Array.isArray(res) ? res : (res.items || res.data || [])
   } catch {
     // error handled by interceptor
   }

@@ -177,15 +177,14 @@ async function fetchData() {
   loading.value = true
   try {
     const params = {
-      page: pagination.page,
-      size: pagination.size,
+      skip: (pagination.page - 1) * pagination.size,
+      limit: pagination.size,
       ...filters,
     }
-    // 移除空值
     Object.keys(params).forEach((k) => { if (params[k] === '' || params[k] == null) delete params[k] })
     const res = await getUsers(params)
-    tableData.value = res.items || res.data || []
-    pagination.total = res.total || 0
+    tableData.value = Array.isArray(res) ? res : (res.items || res.data || [])
+    pagination.total = res.total || tableData.value.length
   } catch {
     // 错误已由 request 拦截器处理
   } finally {

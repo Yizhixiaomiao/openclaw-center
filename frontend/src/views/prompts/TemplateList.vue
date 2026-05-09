@@ -232,16 +232,15 @@ async function loadTemplates() {
   loading.value = true
   try {
     const params = {
-      page: pagination.page,
-      size: pagination.size,
+      skip: (pagination.page - 1) * pagination.size,
+      limit: pagination.size,
       ...filters,
     }
-    // Remove empty filters
     Object.keys(params).forEach((key) => {
       if (params[key] === '' || params[key] == null) delete params[key]
     })
     const res = await getTemplates(params)
-    templates.value = res.items || res.data || []
+    templates.value = Array.isArray(res) ? res : (res.items || res.data || [])
     pagination.total = res.total || templates.value.length
   } catch {
     // error handled by interceptor
