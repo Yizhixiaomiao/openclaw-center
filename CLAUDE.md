@@ -41,13 +41,22 @@ docker-compose up -d   # starts MySQL + backend; frontend runs separately via np
 
 - **Backend** (`backend/`): FastAPI serving REST APIs under `/api/`. SQLAlchemy ORM with MySQL, Pydantic v2 schemas, JWT auth. Auto-creates tables and seeds admin user on startup (`Base.metadata.create_all`).
 - **Frontend** (`frontend/`): Vue 3 SPA with Element Plus UI, Pinia state, Vue Router with auth guards. Axios client at `src/utils/request.js` adds Bearer token and unwraps `response.data`.
-- **Agent** (`agent/`): Python client that registers with the backend, sends heartbeats, collects system metrics, syncs prompts/skills, and executes tasks. Config via `config.yaml`.
+- **Agent** (`agent/`): Python client that auto-registers with the backend, sends heartbeats, collects system metrics, syncs prompts/skills, and executes tasks. First run interactively prompts for `center_url` and auto-generates `machine_code`.
 
 ### Backend route organization
 
 All API routes in `backend/app/api/` follow the pattern: router → Pydantic schema validation → SQLAlchemy model → DB session. Routers are registered in `main.py` with `/api/` prefixes.
 
 Key models: `User`, `Machine`, `AgentInfo`, `PromptTemplate`, `Skill`, `DeployTask`, `CodingPlan`, `AgentLog` — see `backend/app/models/__init__.py` for the full list.
+
+Key endpoints beyond basic CRUD:
+- `PUT /machines/{id}/config` — Edit OpenClaw config, creates deploy task for sync
+- `PUT /machines/{id}/agent-config` — Edit Agent config, creates deploy task for sync
+- `GET /machines/ips` — Return distinct machine IPs for dropdown filter
+- `GET /skills/{skill_id}/files` — Return file tree of uploaded skill package
+- `GET /skills/{skill_id}/files/content?path=` — Return file content for browsing
+- `GET /skills/detail/{skill_id}` — Return skill detail with installed machines
+- `POST /agent/skills/sync` — Agent uploads full skill packages (base64 zip)
 
 ### Frontend conventions
 
@@ -60,7 +69,7 @@ Key models: `User`, `Machine`, `AgentInfo`, `PromptTemplate`, `Skill`, `DeployTa
 
 - Backend: `backend/app/config.py` — pydantic-settings, reads from `.env` file (DATABASE_URL, JWT_SECRET_KEY, ENCRYPTION_KEY, CORS_ORIGINS, UPLOAD_DIR)
 - Frontend: `frontend/vite.config.js` — proxy, auto-import resolvers
-- Agent: `agent/config.yaml` — server URL, heartbeat interval, log paths
+- Agent: `agent/config.yaml` — auto-created on first run with interactive `center_url` prompt, auto-generated `machine_code` (format: `OC-HOSTNAME-XXXX`)
 
 ### User roles
 
@@ -73,3 +82,7 @@ Key models: `User`, `Machine`, `AgentInfo`, `PromptTemplate`, `Skill`, `DeployTa
 - Tables auto-created on startup (no Alembic migrations in use despite dependency being listed)
 - Admin seed runs on every startup via `auth.seed_admin()`
 - Default admin credentials: `admin` / `admin123`
+- Deploy tasks: console config edits create `DeployTask` + `DeployTaskItem` records; agents poll `/api/agent/tasks/pull` and execute locally
+- Skill packages: agent zips skill folder → base64 encode → POST to `/api/agent/skills/sync` → backend extracts to `UPLOAD_DIR/skills/{code}/`
+- SKILL.md frontmatter: agent parses YAML frontmatter between `---` markers to extract `description` as fallback when `manifest.json` lacks it
+- Machine code auto-generation: `OC-{hostname[:12]}-{4 random hex}` on first run, saved back to config.yaml
