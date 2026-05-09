@@ -23,3 +23,7 @@ export function updateMachineConfig(id, data) {
 export function updateAgentConfig(id, data) {
   return request.put(`/machines/${id}/agent-config`, data)
 }
+
+export function getMachineIps() {
+  return request.get('/machines/ips')
+}

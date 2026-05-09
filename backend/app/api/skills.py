@@ -35,7 +35,13 @@ def list_skills(
     if status:
         q = q.filter(Skill.status == status)
     if keyword:
-        q = q.filter(Skill.name.contains(keyword) | Skill.code.contains(keyword))
+        q = q.filter(
+            Skill.name.contains(keyword)
+            | Skill.code.contains(keyword)
+            | Skill.version.contains(keyword)
+            | Skill.description.contains(keyword)
+            | Skill.position_type.contains(keyword)
+        )
     if machine_ip:
         q = q.filter(
             Skill.id.in_(

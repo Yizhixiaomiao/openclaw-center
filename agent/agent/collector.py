@@ -117,6 +117,28 @@ def package_skill_folder(skill_path):
     }
 
 
+def _parse_skill_md_description(skill_path):
+    """Extract description from SKILL.md YAML frontmatter."""
+    skill_md = os.path.join(skill_path, "SKILL.md")
+    if not os.path.isfile(skill_md):
+        return ""
+    try:
+        with open(skill_md, "r", encoding="utf-8") as f:
+            content = f.read()
+        if not content.startswith("---"):
+            return ""
+        end = content.find("---", 3)
+        if end == -1:
+            return ""
+        import yaml
+        frontmatter = yaml.safe_load(content[3:end])
+        if isinstance(frontmatter, dict):
+            return frontmatter.get("description", "")
+    except Exception:
+        pass
+    return ""
+
+
 def get_installed_skills(config):
     """Scan skills directory and return full skill info with packaged content."""
     skills = []
@@ -141,6 +163,10 @@ def get_installed_skills(config):
                             description = data.get("description", "")
                     except Exception:
                         pass
+
+                # Fallback: extract description from SKILL.md frontmatter
+                if not description:
+                    description = _parse_skill_md_description(skill_path)
 
                 # Package entire folder as base64 zip
                 pkg = package_skill_folder(skill_path)

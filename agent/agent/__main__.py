@@ -19,7 +19,7 @@ def signal_handler(sig, frame):
 
 
 def self_check(config):
-    """Basic self-check: verify connectivity and config."""
+    """Basic self-check: verify connectivity."""
     logger.info("Running self-check...")
     import requests
     try:
@@ -32,10 +32,6 @@ def self_check(config):
         logger.error("Cannot reach center server: %s", e)
         return False
 
-    if not config.machine_code:
-        logger.error("machine_code not configured in config.yaml")
-        return False
-
     logger.info("Self-check passed")
     return True
 
@@ -46,6 +42,10 @@ def main():
 
     config_path = sys.argv[1] if len(sys.argv) > 1 else None
     config = AgentConfig(config_path)
+
+    # First-run setup: ensure center_url and machine_code are configured
+    config.ensure_center_url()
+    config.ensure_machine_code()
 
     logger.info("OpenClaw Center Agent starting...")
     logger.info("Center URL: %s", config.center_url)
@@ -83,11 +83,9 @@ if __name__ == "__main__":
     try:
         main()
     except Exception as e:
-        import traceback, sys
-        # 确保错误可见：打印到控制台
+        import traceback, os
         print(f"FATAL ERROR: {e}")
         traceback.print_exc(file=sys.stderr)
-        # 同时写入错误文件便于远程排查
         try:
             os.makedirs(r"C:\ProgramData\OpenClawCenterAgent\logs", exist_ok=True)
             with open(r"C:\ProgramData\OpenClawCenterAgent\logs\error.log", "w", encoding="utf-8") as f:
@@ -95,5 +93,5 @@ if __name__ == "__main__":
                 traceback.print_exc(file=f)
         except Exception:
             pass
-        input("Press Enter to exit...")  # 防止闪退
+        input("Press Enter to exit...")
         sys.exit(1)

@@ -4,10 +4,12 @@
     <el-card class="filter-card" shadow="never">
       <el-form :model="filters" inline>
         <el-form-item label="关键词">
-          <el-input v-model="filters.keyword" placeholder="名称/编码" clearable style="width: 180px" @keyup.enter="handleSearch" />
+          <el-input v-model="filters.keyword" placeholder="全字段搜索" clearable style="width: 180px" @keyup.enter="handleSearch" />
         </el-form-item>
         <el-form-item label="机器IP">
-          <el-input v-model="filters.machine_ip" placeholder="按IP筛选" clearable style="width: 160px" @keyup.enter="handleSearch" />
+          <el-select v-model="filters.machine_ip" placeholder="全部IP" clearable style="width: 160px" @change="handleSearch">
+            <el-option v-for="ip in machineIps" :key="ip" :label="ip" :value="ip" />
+          </el-select>
         </el-form-item>
         <el-form-item>
           <el-button type="primary" :icon="Search" @click="handleSearch">搜索</el-button>
@@ -224,7 +226,7 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Refresh } from '@element-plus/icons-vue'
 import { getSkills, createSkill, getSkillDetail, deleteSkill, removeSkillFromMachine, getSkillFiles, getSkillFileContent } from '../../api/skill'
-import { getMachines } from '../../api/machine'
+import { getMachines, getMachineIps } from '../../api/machine'
 import { distributeSkill as distributeSkillApi } from '../../api/deploy'
 
 // ---------- 筛选 ----------
@@ -259,6 +261,16 @@ async function fetchData() {
 }
 
 const skillMachinesMap = reactive({})
+const machineIps = ref([])
+
+async function loadMachineIps() {
+  try {
+    const res = await getMachineIps()
+    machineIps.value = Array.isArray(res) ? res : []
+  } catch {
+    machineIps.value = []
+  }
+}
 
 async function enrichSkills() {
   for (const skill of tableData.value) {
@@ -516,6 +528,7 @@ async function loadMachines() {
 onMounted(() => {
   fetchData()
   loadMachines()
+  loadMachineIps()
 })
 </script>
 

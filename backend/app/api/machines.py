@@ -16,6 +16,15 @@ from app.schemas.machine import MachineCreate, MachineUpdate, MachineResponse, C
 router = APIRouter()
 
 
+@router.get("/ips")
+def list_machine_ips(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    ips = db.query(Machine.ip).filter(Machine.ip.isnot(None), Machine.ip != "").distinct().all()
+    return [ip[0] for ip in ips if ip[0]]
+
+
 @router.get("", response_model=List[MachineResponse])
 def list_machines(
     status: Optional[str] = None,
