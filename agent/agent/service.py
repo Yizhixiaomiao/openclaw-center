@@ -26,28 +26,40 @@ def is_service_installed():
         return False
 
 
-def install_service(exe_path):
-    bin_path = f'"{exe_path}" --service'
-    cmd = [
-        "sc", "create", SERVICE_NAME,
-        f"binPath= {bin_path}",
-        "start=", "auto",
-        f"DisplayName= {SERVICE_DISPLAY}",
-    ]
-    result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
-    if result.returncode != 0:
-        raise RuntimeError(f"sc create failed: {result.stderr.strip() or result.stdout.strip()}")
+def install_service():
+    """Install the service using pywin32 HandleCommandLine mechanism.
 
+    After pywin32 registers the service, we update the binPath to include
+    --service so that SCM launches the exe with the service flag.
+    """
+    exe_path = sys.executable if getattr(sys, 'frozen', False) else sys.argv[0]
+    result = subprocess.run(
+        [exe_path, "--service", "install"],
+        capture_output=True, text=True, timeout=30,
+    )
+    if result.returncode != 0:
+        raise RuntimeError(
+            f"Service install failed: {result.stderr.strip() or result.stdout.strip()}"
+        )
+
+    # Update binPath to include --service flag so SCM passes it when starting
     subprocess.run(
-        ["sc", "description", SERVICE_NAME,
-         "OpenClaw Center Agent - heartbeat, config sync, task execution"],
-        capture_output=True, text=True, timeout=10,
+        ["sc", "config", SERVICE_NAME, f"binPath= \"{exe_path}\" --service"],
+        capture_output=True, text=True, timeout=30,
     )
 
 
 def start_service():
     subprocess.run(
         ["sc", "start", SERVICE_NAME],
+        capture_output=True, text=True, timeout=30,
+    )
+
+
+def remove_service():
+    exe_path = sys.executable if getattr(sys, 'frozen', False) else sys.argv[0]
+    subprocess.run(
+        [exe_path, "--service", "remove"],
         capture_output=True, text=True, timeout=30,
     )
 
@@ -63,6 +75,10 @@ def run_as_service():
         print("ERROR: pywin32 is required for Windows service mode.")
         print("Install it with: pip install pywin32")
         sys.exit(1)
+
+    # Remove --service from argv so HandleCommandLine sees only its own args
+    # e.g. "exe --service install" → HandleCommandLine sees "exe install"
+    sys.argv = [sys.argv[0]] + [a for a in sys.argv[1:] if a != "--service"]
 
     import signal
     from agent.config import AgentConfig
@@ -96,8 +112,10 @@ def run_as_service():
             )
 
             config = AgentConfig()
-            config.ensure_center_url()
-            config.ensure_machine_code()
+            # In service mode, config must already be configured (no interactive input)
+            if not config.center_url or not config.machine_code:
+                logger.error("Center URL or machine code not configured. Run the agent interactively first.")
+                return
 
             if not register_agent(config):
                 logger.error("Registration failed in service mode")

@@ -40,6 +40,13 @@ def main():
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
 
+    # --service mode: delegate to pywin32 HandleCommandLine immediately
+    # (install/remove/start/stop commands must not trigger interactive setup)
+    if "--service" in sys.argv:
+        from agent.service import run_as_service
+        run_as_service()
+        return
+
     config_path = sys.argv[1] if len(sys.argv) > 1 else None
     config = AgentConfig(config_path)
 
@@ -60,25 +67,17 @@ def main():
         sys.exit(1)
 
     # Auto-install as Windows service after first registration
-    running_as_service = "--service" in sys.argv
-    if running_as_service:
-        from agent.service import run_as_service
-        run_as_service()
-        return
-
     from agent.service import is_service_installed, install_service, start_service, is_admin
     if not is_service_installed():
         if is_admin():
-            exe_path = sys.executable if getattr(sys, 'frozen', False) else None
-            if exe_path:
-                try:
-                    install_service(exe_path)
-                    start_service()
-                    logger.info("Agent registered as Windows service. Starting service mode...")
-                    print("Agent 已注册为 Windows 服务并启动，本窗口将自动关闭。")
-                    return
-                except Exception as e:
-                    logger.warning("Failed to install service: %s (will run in console mode)", e)
+            try:
+                install_service()
+                start_service()
+                logger.info("Agent registered as Windows service. Starting service mode...")
+                print("Agent 已注册为 Windows 服务并启动，本窗口将自动关闭。")
+                return
+            except Exception as e:
+                logger.warning("Failed to install service: %s (will run in console mode)", e)
         else:
             logger.warning("Not running as admin - cannot install service. Run as administrator to enable auto-start.")
             print("提示：以管理员身份运行可自动注册为 Windows 服务，实现开机自启。")
