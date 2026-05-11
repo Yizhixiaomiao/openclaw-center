@@ -95,81 +95,6 @@
       </template>
     </el-dialog>
 
-    <!-- 技能详情对话框 -->
-    <el-dialog v-model="detailVisible" title="技能详情" width="960px" destroy-on-close>
-      <div v-loading="detailLoading">
-        <el-descriptions :column="2" border>
-          <el-descriptions-item label="技能ID">{{ detailSkill.id }}</el-descriptions-item>
-          <el-descriptions-item label="名称">{{ detailSkill.name }}</el-descriptions-item>
-          <el-descriptions-item label="编码">{{ detailSkill.code }}</el-descriptions-item>
-          <el-descriptions-item label="版本">{{ detailSkill.version || '-' }}</el-descriptions-item>
-          <el-descriptions-item label="描述" :span="2">{{ detailSkill.description || '-' }}</el-descriptions-item>
-        </el-descriptions>
-
-        <h4 style="margin: 20px 0 10px">已安装机器</h4>
-        <el-table :data="detailMachines" border stripe style="width: 100%">
-          <el-table-column prop="machine_code" label="机器码" min-width="140" />
-          <el-table-column prop="ip" label="IP" min-width="130" />
-          <el-table-column prop="hostname" label="主机名" min-width="120" />
-          <el-table-column label="状态" width="100" align="center">
-            <template #default="{ row }">
-              <el-tag :type="row.status === 'installed' ? 'success' : 'info'" size="small">
-                {{ row.status === 'installed' ? '已安装' : row.status }}
-              </el-tag>
-            </template>
-          </el-table-column>
-          <el-table-column label="操作" width="100" align="center">
-            <template #default="{ row }">
-              <el-button link type="danger" size="small" @click="removeFromMachine(row)">移除</el-button>
-            </template>
-          </el-table-column>
-        </el-table>
-        <el-empty v-if="detailMachines.length === 0" description="暂无机器安装此技能" />
-
-        <h4 style="margin: 20px 0 10px">文件浏览</h4>
-        <div class="file-browser">
-          <div class="file-tree-panel">
-            <el-tree
-              v-if="skillFiles.length > 0"
-              :data="skillFiles"
-              :props="{ label: 'path', children: 'children' }"
-              node-key="path"
-              highlight-current
-              default-expand-all
-              @node-click="onFileNodeClick"
-            >
-              <template #default="{ node, data }">
-                <span class="file-tree-node">
-                  <span>{{ data.type === 'dir' ? '📁' : '📄' }} {{ node.label.split('/').pop() }}</span>
-                  <span v-if="data.type === 'file'" class="file-size">{{ formatSize(data.size) }}</span>
-                </span>
-              </template>
-            </el-tree>
-            <el-empty v-else description="暂无文件" :image-size="60" />
-          </div>
-          <div class="file-content-panel">
-            <div v-if="selectedFilePath" class="file-content-header">
-              <span>{{ selectedFilePath }}</span>
-            </div>
-            <el-input
-              v-if="fileContent !== null"
-              v-model="fileContent"
-              type="textarea"
-              :rows="20"
-              readonly
-              style="font-family: monospace; font-size: 13px"
-            />
-            <div v-else-if="selectedFilePath" class="file-content-placeholder">
-              点击左侧文件查看内容
-            </div>
-            <div v-else class="file-content-placeholder">
-              选择文件以查看内容
-            </div>
-          </div>
-        </div>
-      </div>
-    </el-dialog>
-
     <!-- 分发技能对话框 -->
     <el-dialog v-model="distributeVisible" title="分发技能" width="720px" destroy-on-close @closed="resetDistribute">
       <div style="margin-bottom: 16px">
@@ -223,11 +148,14 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Refresh } from '@element-plus/icons-vue'
-import { getSkills, createSkill, getSkillDetail, deleteSkill, removeSkillFromMachine, getSkillFiles, getSkillFileContent } from '../../api/skill'
+import { getSkills, createSkill, getSkillDetail, deleteSkill } from '../../api/skill'
 import { getMachines, getMachineIps } from '../../api/machine'
 import { distributeSkill as distributeSkillApi } from '../../api/deploy'
+
+const router = useRouter()
 
 // ---------- 筛选 ----------
 const filters = reactive({
@@ -297,13 +225,6 @@ function handleReset() {
   fetchData()
 }
 
-function formatSize(bytes) {
-  if (!bytes) return ''
-  if (bytes < 1024) return bytes + ' B'
-  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB'
-  return (bytes / 1024 / 1024).toFixed(1) + ' MB'
-}
-
 function formatDateTime(val) {
   if (!val) return '-'
   const d = new Date(val)
@@ -359,71 +280,9 @@ async function handleSubmit() {
   }
 }
 
-// ---------- 技能详情 ----------
-const detailVisible = ref(false)
-const detailLoading = ref(false)
-const detailSkill = ref({})
-const detailMachines = ref([])
-
-// File browsing state
-const skillFiles = ref([])
-const selectedFilePath = ref('')
-const fileContent = ref(null)
-const fileContentLoading = ref(false)
-
-async function showDetail(id) {
-  detailVisible.value = true
-  detailLoading.value = true
-  detailSkill.value = {}
-  detailMachines.value = []
-  skillFiles.value = []
-  selectedFilePath.value = ''
-  fileContent.value = null
-  try {
-    const [res, filesRes] = await Promise.all([
-      getSkillDetail(id),
-      getSkillFiles(id),
-    ])
-    detailSkill.value = res.skill || {}
-    detailMachines.value = res.machines || []
-    skillFiles.value = filesRes.files || []
-  } catch {
-    // handled by interceptor
-  } finally {
-    detailLoading.value = false
-  }
-}
-
-async function onFileNodeClick(data) {
-  if (data.type === 'dir') return
-  selectedFilePath.value = data.path
-  fileContent.value = null
-  fileContentLoading.value = true
-  try {
-    const res = await getSkillFileContent(detailSkill.value.id, data.path)
-    fileContent.value = res.content || ''
-  } catch {
-    fileContent.value = '（读取文件内容失败）'
-  } finally {
-    fileContentLoading.value = false
-  }
-}
-
-async function removeFromMachine(row) {
-  try {
-    await ElMessageBox.confirm(`确定从机器「${row.hostname || row.machine_code}」移除技能「${detailSkill.value.name}」吗？`, '确认移除', {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning',
-    })
-    await removeSkillFromMachine(detailSkill.value.id, row.machine_id)
-    ElMessage.success('技能已移除')
-    showDetail(detailSkill.value.id)
-    delete skillMachinesMap[detailSkill.value.id]
-    fetchData()
-  } catch {
-    // cancelled
-  }
+// ---------- 查看详情（跳转独立页面） ----------
+function showDetail(id) {
+  router.push(`/skills/${id}`)
 }
 
 // ---------- 删除技能 ----------
@@ -549,50 +408,5 @@ onMounted(() => {
   display: flex;
   justify-content: flex-end;
   margin-top: 16px;
-}
-.file-browser {
-  display: flex;
-  border: 1px solid #e4e7ed;
-  border-radius: 4px;
-  min-height: 400px;
-}
-.file-tree-panel {
-  width: 260px;
-  border-right: 1px solid #e4e7ed;
-  overflow-y: auto;
-  padding: 8px;
-}
-.file-content-panel {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-.file-content-header {
-  padding: 8px 12px;
-  border-bottom: 1px solid #e4e7ed;
-  font-size: 13px;
-  color: #606266;
-  font-family: monospace;
-}
-.file-content-placeholder {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex: 1;
-  color: #c0c4cc;
-  font-size: 14px;
-}
-.file-tree-node {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  font-size: 13px;
-}
-.file-size {
-  color: #909399;
-  font-size: 12px;
-  margin-left: 8px;
 }
 </style>

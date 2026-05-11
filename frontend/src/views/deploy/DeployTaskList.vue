@@ -43,7 +43,11 @@
             </template>
           </el-table-column>
           <el-table-column prop="target_type" label="目标类型" width="120" align="center" />
-          <el-table-column prop="target_id" label="目标ID" width="100" align="center" />
+          <el-table-column label="目标机器" min-width="200" show-overflow-tooltip>
+            <template #default="{ row }">
+              {{ resolveTargetInfo(row) }}
+            </template>
+          </el-table-column>
           <el-table-column label="状态" width="110" align="center">
             <template #default="{ row }">
               <el-tag :type="taskStatusTagMap[row.status]?.type" size="small">
@@ -129,7 +133,7 @@
     <el-dialog
       v-model="detailDialogVisible"
       title="任务详情"
-      width="800px"
+      width="960px"
       destroy-on-close
     >
       <div v-loading="detailLoading">
@@ -141,7 +145,7 @@
             </el-tag>
           </el-descriptions-item>
           <el-descriptions-item label="目标类型">{{ currentTask.target_type }}</el-descriptions-item>
-          <el-descriptions-item label="目标ID">{{ currentTask.target_id }}</el-descriptions-item>
+          <el-descriptions-item label="目标机器">{{ resolveTargetInfo(currentTask) }}</el-descriptions-item>
           <el-descriptions-item label="状态">
             <el-tag :type="taskStatusTagMap[currentTask.status]?.type" size="small">
               {{ taskStatusTagMap[currentTask.status]?.label || currentTask.status }}
@@ -158,7 +162,11 @@
           size="small"
           style="width: 100%"
         >
-          <el-table-column prop="machine_id" label="机器ID" min-width="120" show-overflow-tooltip />
+          <el-table-column label="机器" min-width="200" show-overflow-tooltip>
+            <template #default="{ row }">
+              {{ resolveMachineInfo(row.machine_id) }}
+            </template>
+          </el-table-column>
           <el-table-column label="状态" width="110" align="center">
             <template #default="{ row }">
               <el-tag :type="itemStatusTagMap[row.status]?.type" size="small">
@@ -191,6 +199,7 @@ import {
   createDeployTask,
   getDeployTask,
 } from '../../api/deploy'
+import { getMachines } from '../../api/machine'
 
 const taskTypeTagMap = {
   prompt: { label: 'Prompt', type: '' },
@@ -250,6 +259,44 @@ const createFormRules = {
   target_id: [{ required: true, message: '请输入目标ID', trigger: 'blur' }],
 }
 
+// ---------- 机器名解析 ----------
+const machineMap = ref({})
+
+async function loadMachineMap() {
+  try {
+    const res = await getMachines({ skip: 0, limit: 500 })
+    const list = Array.isArray(res) ? res : (res.items || res.data || [])
+    const map = {}
+    list.forEach((m) => { map[m.id] = { hostname: m.hostname, ip: m.ip, code: m.code } })
+    machineMap.value = map
+  } catch { /* ignored */ }
+}
+
+function resolveMachineInfo(machineId) {
+  if (!machineId) return '-'
+  const m = machineMap.value[machineId]
+  if (!m) return `#${machineId}`
+  if (m.hostname && m.ip) return `${m.hostname} (${m.ip})`
+  if (m.hostname) return m.hostname
+  if (m.ip) return m.ip
+  return m.code || `#${machineId}`
+}
+
+function resolveTargetInfo(task) {
+  if (!task || !task.target_id) return '-'
+  if (task.target_type === 'machine') {
+    const id = parseInt(task.target_id)
+    if (id) return resolveMachineInfo(id)
+  }
+  if (task.target_type === 'machines' || String(task.target_id).includes(',')) {
+    const ids = String(task.target_id).split(',').map((s) => parseInt(s.trim())).filter(Boolean)
+    return ids.map((id) => resolveMachineInfo(id)).join('、')
+  }
+  if (task.target_type === 'user') return `用户 #${task.target_id}`
+  if (task.target_type === 'department') return `部门: ${task.target_id}`
+  return task.target_id
+}
+
 function formatTime(val) {
   if (!val) return '-'
   return new Date(val).toLocaleString('zh-CN')
@@ -289,7 +336,12 @@ async function showTaskDetail(row) {
   currentTask.value = {}
   try {
     const res = await getDeployTask(row.id)
-    currentTask.value = res
+    // Backend returns {task: {...}, items: [...]}
+    if (res && res.task) {
+      currentTask.value = { ...res.task, items: res.items || [] }
+    } else {
+      currentTask.value = res || {}
+    }
   } catch {
     // error handled by interceptor
   } finally {
@@ -344,6 +396,7 @@ function resetCreateForm() {
 
 onMounted(() => {
   loadTasks()
+  loadMachineMap()
 })
 </script>
 

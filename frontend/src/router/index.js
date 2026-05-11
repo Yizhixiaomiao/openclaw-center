@@ -64,6 +64,11 @@ const routes = [
         component: () => import('../views/skills/SkillList.vue'),
       },
       {
+        path: 'skills/:id',
+        name: 'SkillDetail',
+        component: () => import('../views/skills/SkillDetail.vue'),
+      },
+      {
         path: 'deploy',
         name: 'Deploy',
         component: () => import('../views/deploy/DeployTaskList.vue'),

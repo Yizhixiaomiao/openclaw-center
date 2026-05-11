@@ -62,7 +62,10 @@
             </el-descriptions>
             <div style="margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center">
               <span style="font-weight: 600">Agent 配置</span>
-              <el-button type="primary" size="small" :loading="agentConfigSaving" @click="saveAgentConfig">保存并同步</el-button>
+              <div>
+                <el-button size="small" :loading="syncing" @click="handleSync">同步</el-button>
+                <el-button type="primary" size="small" :loading="agentConfigSaving" @click="saveAgentConfig">保存并下发</el-button>
+              </div>
             </div>
             <el-input
               v-model="agentConfigContent"
@@ -86,7 +89,10 @@
             </el-descriptions>
             <div style="margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center">
               <span style="font-weight: 600">配置内容</span>
-              <el-button type="primary" size="small" :loading="configSaving" @click="saveConfig">保存并同步</el-button>
+              <div>
+                <el-button size="small" :loading="syncing" @click="handleSync">同步</el-button>
+                <el-button type="primary" size="small" :loading="configSaving" @click="saveConfig">保存并下发</el-button>
+              </div>
             </div>
             <el-input
               v-model="configContent"
@@ -191,7 +197,7 @@
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ArrowLeft } from '@element-plus/icons-vue'
-import { getMachine, updateMachineConfig, updateAgentConfig } from '../../api/machine'
+import { getMachine, updateMachineConfig, updateAgentConfig, syncMachine as syncMachineApi } from '../../api/machine'
 import { getSkillDetail } from '../../api/skill'
 import { ElMessage } from 'element-plus'
 
@@ -249,7 +255,17 @@ async function loadData() {
   loading.value = true
   try {
     const res = await getMachine(machineId)
-    machine.value = res.data || res
+    const data = res.data || res
+    // Backend returns {machine, agent, config, skills, recent_logs, recent_deploys}
+    // Flatten so template can access machine fields directly
+    machine.value = {
+      ...(data.machine || {}),
+      agent: data.agent || null,
+      config: data.config || null,
+      skills: data.skills || [],
+      logs: data.recent_logs || [],
+      deploy_items: data.recent_deploys || [],
+    }
     if (machine.value.config?.config_content) {
       configContent.value = machine.value.config.config_content
     }
@@ -300,6 +316,21 @@ async function saveAgentConfig() {
     // handled by interceptor
   } finally {
     agentConfigSaving.value = false
+  }
+}
+
+// ---------- 手动同步 ----------
+const syncing = ref(false)
+
+async function handleSync() {
+  syncing.value = true
+  try {
+    await syncMachineApi(machineId)
+    ElMessage.success('同步指令已下发')
+  } catch {
+    // handled by interceptor
+  } finally {
+    syncing.value = false
   }
 }
 

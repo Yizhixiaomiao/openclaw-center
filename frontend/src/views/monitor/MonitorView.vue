@@ -23,7 +23,7 @@
         <el-card shadow="hover" class="stat-card">
           <div class="stat-content">
             <div class="stat-label">在线数</div>
-            <div class="stat-value online">{{ overview.online_count ?? '-' }}</div>
+            <div class="stat-value online">{{ overview.online_machines ?? '-' }}</div>
           </div>
           <el-icon class="stat-icon" :size="40" color="#67C23A"><CircleCheck /></el-icon>
         </el-card>
@@ -32,7 +32,7 @@
         <el-card shadow="hover" class="stat-card">
           <div class="stat-content">
             <div class="stat-label">离线数</div>
-            <div class="stat-value offline">{{ overview.offline_count ?? '-' }}</div>
+            <div class="stat-value offline">{{ overview.offline_machines ?? '-' }}</div>
           </div>
           <el-icon class="stat-icon" :size="40" color="#909399"><CircleClose /></el-icon>
         </el-card>
@@ -41,7 +41,7 @@
         <el-card shadow="hover" class="stat-card">
           <div class="stat-content">
             <div class="stat-label">异常数</div>
-            <div class="stat-value error">{{ overview.error_count ?? '-' }}</div>
+            <div class="stat-value error">{{ overview.error_machines ?? '-' }}</div>
           </div>
           <el-icon class="stat-icon" :size="40" color="#F56C6C"><WarningFilled /></el-icon>
         </el-card>
@@ -60,7 +60,7 @@
         border
         style="width: 100%"
       >
-        <el-table-column prop="machine_code" label="机器码" min-width="160" show-overflow-tooltip />
+        <el-table-column prop="code" label="机器码" min-width="160" show-overflow-tooltip />
         <el-table-column prop="hostname" label="主机名" width="140" show-overflow-tooltip />
         <el-table-column prop="ip" label="IP" width="140" />
         <el-table-column label="在线状态" width="100" align="center">
@@ -84,9 +84,9 @@
             <span v-else style="color:#ccc">DISK -</span>
           </template>
         </el-table-column>
-        <el-table-column prop="last_heartbeat" label="最近心跳" width="170" align="center">
+        <el-table-column prop="last_heartbeat_at" label="最近心跳" width="170" align="center">
           <template #default="{ row }">
-            {{ formatTime(row.last_heartbeat) }}
+            {{ formatTime(row.last_heartbeat_at) }}
           </template>
         </el-table-column>
       </el-table>
@@ -111,7 +111,13 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="related_id" label="关联ID" width="120" align="center" />
+        <el-table-column label="机器" min-width="200" show-overflow-tooltip>
+          <template #default="{ row }">
+            <template v-if="row.machine_code">{{ row.hostname || row.machine_code }}（{{ row.ip || '-' }}）</template>
+            <template v-else-if="row.plan_id">Plan #{{ row.plan_id }}</template>
+            <template v-else>-</template>
+          </template>
+        </el-table-column>
         <el-table-column prop="message" label="消息" min-width="300" show-overflow-tooltip />
       </el-table>
     </el-card>
@@ -163,7 +169,12 @@
         style="width: 100%"
       >
         <el-table-column prop="id" label="ID" width="70" align="center" />
-        <el-table-column prop="machine_id" label="机器ID" width="120" align="center" show-overflow-tooltip />
+        <el-table-column label="机器" min-width="200" show-overflow-tooltip>
+          <template #default="{ row }">
+            <template v-if="row.machine_code">{{ row.hostname || row.machine_code }}（{{ row.ip || '-' }}）</template>
+            <template v-else>#{{ row.machine_id }}</template>
+          </template>
+        </el-table-column>
         <el-table-column label="级别" width="100" align="center">
           <template #default="{ row }">
             <el-tag :type="logLevelTagMap[row.level]?.type" size="small">

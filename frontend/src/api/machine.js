@@ -27,3 +27,7 @@ export function updateAgentConfig(id, data) {
 export function getMachineIps() {
   return request.get('/machines/ips')
 }
+
+export function syncMachine(id) {
+  return request.post(`/machines/${id}/sync`)
+}

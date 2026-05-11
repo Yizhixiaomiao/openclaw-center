@@ -95,7 +95,28 @@ def monitor_logs(
         q = q.filter(AgentLog.level == level)
     if category:
         q = q.filter(AgentLog.category == category)
-    return q.order_by(AgentLog.created_at.desc()).offset(skip).limit(limit).all()
+    logs = q.order_by(AgentLog.created_at.desc()).offset(skip).limit(limit).all()
+
+    # Enrich logs with machine info
+    machine_ids = list({log.machine_id for log in logs})
+    machines = db.query(Machine).filter(Machine.id.in_(machine_ids)).all() if machine_ids else []
+    machine_map = {m.id: m for m in machines}
+
+    result = []
+    for log in logs:
+        m = machine_map.get(log.machine_id)
+        result.append({
+            "id": log.id,
+            "machine_id": log.machine_id,
+            "machine_code": m.code if m else None,
+            "hostname": m.hostname if m else None,
+            "ip": m.ip if m else None,
+            "level": log.level,
+            "category": log.category,
+            "message": log.message,
+            "created_at": str(log.created_at),
+        })
+    return result
 
 
 @router.get("/alerts")
@@ -116,7 +137,9 @@ def monitor_alerts(
             {
                 "type": "offline",
                 "machine_id": m.id,
-                "code": m.code,
+                "machine_code": m.code,
+                "hostname": m.hostname,
+                "ip": m.ip,
                 "message": f"Machine {m.hostname or m.code} offline",
             }
         )
@@ -127,7 +150,9 @@ def monitor_alerts(
             {
                 "type": "error",
                 "machine_id": m.id,
-                "code": m.code,
+                "machine_code": m.code,
+                "hostname": m.hostname,
+                "ip": m.ip,
                 "message": f"Machine {m.hostname or m.code} in error state",
             }
         )

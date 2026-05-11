@@ -305,3 +305,35 @@ def update_agent_config(
 
     db.commit()
     return {"status": "ok", "message": "Agent配置已保存" + ("，同步任务已创建" if config_path else "")}
+
+
+@router.post("/{machine_id}/sync")
+def sync_machine(
+    machine_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role("admin", "ops")),
+):
+    """Trigger agent to immediately sync all state (heartbeat, config, skills)."""
+    machine = db.query(Machine).filter(Machine.id == machine_id).first()
+    if not machine:
+        raise HTTPException(status_code=404, detail="Machine not found")
+
+    payload = json.dumps({"sync_only": True})
+    task = DeployTask(
+        task_type="config",
+        target_type="machine",
+        target_id=str(machine_id),
+        payload_json=payload,
+        status="pending",
+        created_by=current_user.id,
+    )
+    db.add(task)
+    db.flush()
+    task_item = DeployTaskItem(
+        task_id=task.id,
+        machine_id=machine_id,
+        status="pending",
+    )
+    db.add(task_item)
+    db.commit()
+    return {"status": "ok", "message": "同步指令已下发"}
