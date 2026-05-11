@@ -100,7 +100,7 @@ def distribute_skill(
 
     task = DeployTask(
         task_type="skill",
-        target_type="machines",
+        target_type="machine",
         target_id=",".join(str(mid) for mid in req.machine_ids),
         payload_json=payload,
         status="in_progress",

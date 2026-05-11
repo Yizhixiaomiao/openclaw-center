@@ -1,5 +1,22 @@
 <template>
   <div class="machine-list">
+    <!-- Agent 下载提示 -->
+    <el-alert type="info" :closable="false" class="agent-download-alert">
+      <template #title>
+        <span>Agent 安装：在目标机器上执行以下 PowerShell 命令即可下载并运行 Agent</span>
+      </template>
+      <div class="agent-download-info">
+        <div class="agent-download-cmd">
+          <code>Invoke-WebRequest -Uri "http://{{ centerHost }}:8000/api/agent/download" -OutFile "OpenClawCenterAgent.exe"; .\OpenClawCenterAgent.exe</code>
+          <el-button type="primary" link size="small" @click="copyAgentCmd">复制</el-button>
+        </div>
+        <div class="agent-version-row">
+          <span>当前版本：<el-tag v-if="agentVersionInfo.version && agentVersionInfo.version !== '0.0.0'" size="small">{{ agentVersionInfo.version }}</el-tag><el-tag v-else type="info" size="small">未上传</el-tag></span>
+          <el-button type="warning" size="small" @click="openUploadDialog">上传新版本</el-button>
+        </div>
+      </div>
+    </el-alert>
+
     <!-- 搜索筛选区 -->
     <el-card class="filter-card" shadow="never">
       <el-form :model="filters" inline>
@@ -118,17 +135,60 @@
         <el-button type="primary" :loading="submitting" @click="handleSubmit">确定</el-button>
       </template>
     </el-dialog>
+
+    <!-- 上传 Agent 新版本对话框 -->
+    <el-dialog v-model="uploadDialogVisible" title="上传 Agent 新版本" width="520px" destroy-on-close @closed="resetUploadForm">
+      <el-form ref="uploadFormRef" :model="uploadForm" :rules="uploadFormRules" label-width="100px">
+        <el-form-item label="版本号" prop="version">
+          <el-input v-model="uploadForm.version" placeholder="如 1.1.0" />
+        </el-form-item>
+        <el-form-item label="Agent程序" prop="file">
+          <el-upload
+            ref="uploadFileRef"
+            :auto-upload="false"
+            :limit="1"
+            accept=".exe"
+            :on-change="handleFileChange"
+            :on-remove="handleFileRemove"
+          >
+            <el-button type="primary" size="small">选择文件</el-button>
+            <template #tip>
+              <div class="el-upload__tip">请选择 OpenClawCenterAgent.exe 文件</div>
+            </template>
+          </el-upload>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="uploadDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="uploading" @click="handleUpload">上传</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Search, Refresh, Plus } from '@element-plus/icons-vue'
-import { getMachines, createMachine } from '../../api/machine'
+import { getMachines, createMachine, uploadAgent, getAgentVersion } from '../../api/machine'
 
 const router = useRouter()
+
+// ---------- Agent 下载提示 ----------
+const centerHost = computed(() => {
+  const base = import.meta.env.VITE_API_URL || window.location.hostname
+  return base.replace(/^https?:\/\//, '')
+})
+
+function copyAgentCmd() {
+  const cmd = `Invoke-WebRequest -Uri "http://${centerHost.value}:8000/api/agent/download" -OutFile "OpenClawCenterAgent.exe"; .\\OpenClawCenterAgent.exe`
+  navigator.clipboard.writeText(cmd).then(() => {
+    ElMessage.success('已复制到剪贴板')
+  }).catch(() => {
+    ElMessage.warning('复制失败，请手动复制')
+  })
+}
 
 // ---------- 状态映射 ----------
 const statusOptions = [
@@ -249,6 +309,74 @@ async function handleSubmit() {
   }
 }
 
+// ---------- Agent 版本信息 ----------
+const agentVersionInfo = reactive({ version: '', available: false })
+
+async function fetchAgentVersion() {
+  try {
+    const res = await getAgentVersion()
+    agentVersionInfo.version = res.version || ''
+    agentVersionInfo.available = res.available || false
+  } catch { /* ignored */ }
+}
+
+// ---------- 上传 Agent 新版本 ----------
+const uploadDialogVisible = ref(false)
+const uploading = ref(false)
+const uploadFormRef = ref(null)
+const uploadFileRef = ref(null)
+const uploadFile = ref(null)
+
+const uploadForm = reactive({ version: '', file: null })
+const uploadFormRules = {
+  version: [{ required: true, message: '请输入版本号', trigger: 'blur' }],
+}
+
+function openUploadDialog() {
+  uploadDialogVisible.value = true
+}
+
+function resetUploadForm() {
+  uploadForm.version = ''
+  uploadForm.file = null
+  uploadFile.value = null
+  uploadFormRef.value?.resetFields()
+}
+
+function handleFileChange(file) {
+  uploadFile.value = file.raw
+}
+
+function handleFileRemove() {
+  uploadFile.value = null
+}
+
+async function handleUpload() {
+  try {
+    await uploadFormRef.value.validate()
+  } catch {
+    return
+  }
+  if (!uploadFile.value) {
+    ElMessage.warning('请选择 Agent 程序文件')
+    return
+  }
+  uploading.value = true
+  try {
+    const formData = new FormData()
+    formData.append('version', uploadForm.version)
+    formData.append('file', uploadFile.value)
+    await uploadAgent(formData)
+    ElMessage.success('Agent 新版本上传成功')
+    uploadDialogVisible.value = false
+    fetchAgentVersion()
+  } catch {
+    // handled by interceptor
+  } finally {
+    uploading.value = false
+  }
+}
+
 // ---------- 跳转详情 ----------
 function goDetail(id) {
   router.push(`/machines/${id}`)
@@ -257,12 +385,37 @@ function goDetail(id) {
 // ---------- 初始化 ----------
 onMounted(() => {
   fetchData()
+  fetchAgentVersion()
 })
 </script>
 
 <style scoped>
 .machine-list {
   padding: 16px;
+}
+.agent-download-alert {
+  margin-bottom: 16px;
+}
+.agent-download-info {
+  margin-top: 4px;
+}
+.agent-download-cmd {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.agent-version-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 8px;
+}
+.agent-download-cmd code {
+  background: #f5f7fa;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 13px;
+  word-break: break-all;
 }
 .filter-card {
   margin-bottom: 16px;

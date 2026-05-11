@@ -264,7 +264,7 @@ const machineMap = ref({})
 
 async function loadMachineMap() {
   try {
-    const res = await getMachines({ skip: 0, limit: 500 })
+    const res = await getMachines({ skip: 0, limit: 200 })
     const list = Array.isArray(res) ? res : (res.items || res.data || [])
     const map = {}
     list.forEach((m) => { map[m.id] = { hostname: m.hostname, ip: m.ip, code: m.code } })

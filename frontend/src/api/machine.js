@@ -31,3 +31,11 @@ export function getMachineIps() {
 export function syncMachine(id) {
   return request.post(`/machines/${id}/sync`)
 }
+
+export function uploadAgent(formData) {
+  return request.post('/agent/upload', formData)
+}
+
+export function getAgentVersion() {
+  return request.get('/agent/version')
+}

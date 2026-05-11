@@ -1,6 +1,7 @@
 import platform
 import socket
 import requests
+from agent.config import AGENT_VERSION
 from agent.logger import setup_logger
 
 logger = setup_logger("register")
@@ -20,7 +21,7 @@ def register_agent(config):
         "hostname": hostname,
         "ip": ip,
         "os": f"{platform.system()} {platform.release()}",
-        "agent_version": "1.0.0",
+        "agent_version": AGENT_VERSION,
         "current_user": config.current_user,
         "agent_config_content": config.agent_config_content,
         "agent_config_path": config.agent_config_path,

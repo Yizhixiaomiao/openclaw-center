@@ -129,7 +129,6 @@ def list_machine_skills(
 @router.get("/{skill_code}/download")
 def download_skill(
     skill_code: str,
-    current_user: User = Depends(get_current_user),
 ):
     skill_dir = os.path.join(settings.UPLOAD_DIR, "skills", skill_code)
     zip_path = os.path.join(skill_dir, "package.zip")

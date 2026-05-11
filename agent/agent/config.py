@@ -3,6 +3,8 @@ import uuid
 import socket
 import yaml
 
+AGENT_VERSION = "1.0.0"
+
 DEFAULT_CONFIG_PATH = r"C:\ProgramData\OpenClawCenterAgent\config.yaml"
 DEFAULT_LOG_DIR = r"C:\ProgramData\OpenClawCenterAgent\logs"
 DEFAULT_CACHE_DIR = r"C:\ProgramData\OpenClawCenterAgent\cache"

@@ -1,4 +1,5 @@
-from fastapi import APIRouter, HTTPException, Depends, Header
+from fastapi import APIRouter, HTTPException, Depends, Header, Form, File, UploadFile
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from datetime import datetime
 import json
@@ -9,6 +10,8 @@ import io
 from app.config import settings
 from app.database import SessionLocal
 from app.models.machine import Machine, AgentInfo, OpenClawConfig
+from app.models.user import User
+from app.utils.deps import require_role
 from app.models.skill import MachineSkill, Skill
 from app.models.deploy import DeployTask, DeployTaskItem
 from app.models.log import AgentLog
@@ -24,6 +27,43 @@ from app.schemas.machine import (
 )
 
 router = APIRouter()
+
+
+@router.get("/download")
+def download_agent():
+    exe_path = os.path.join(settings.UPLOAD_DIR, "agent", "OpenClawCenterAgent.exe")
+    if not os.path.exists(exe_path):
+        raise HTTPException(status_code=404, detail="Agent executable not found")
+    return FileResponse(exe_path, filename="OpenClawCenterAgent.exe")
+
+
+@router.get("/version")
+def agent_version():
+    exe_path = os.path.join(settings.UPLOAD_DIR, "agent", "OpenClawCenterAgent.exe")
+    version_file = os.path.join(settings.UPLOAD_DIR, "agent", "version.txt")
+    version = "0.0.0"
+    if os.path.exists(version_file):
+        with open(version_file, "r") as f:
+            version = f.read().strip() or "0.0.0"
+    available = os.path.exists(exe_path)
+    return {"version": version, "available": available}
+
+
+@router.post("/upload")
+def upload_agent(
+    version: str = Form(...),
+    file: UploadFile = File(...),
+    current_user: User = Depends(require_role("admin", "support")),
+):
+    agent_dir = os.path.join(settings.UPLOAD_DIR, "agent")
+    os.makedirs(agent_dir, exist_ok=True)
+    exe_path = os.path.join(agent_dir, "OpenClawCenterAgent.exe")
+    with open(exe_path, "wb") as f:
+        f.write(file.file.read())
+    version_path = os.path.join(agent_dir, "version.txt")
+    with open(version_path, "w") as f:
+        f.write(version.strip())
+    return {"status": "ok", "version": version.strip()}
 
 
 def get_machine_by_code(db: Session, machine_code: str) -> Machine:
@@ -99,6 +139,13 @@ def agent_register(req: AgentRegisterRequest):
         db.close()
 
 
+def _parse_version(v):
+    try:
+        return tuple(int(x) for x in v.split("."))
+    except (ValueError, AttributeError):
+        return (0, 0, 0)
+
+
 @router.post("/heartbeat")
 def agent_heartbeat(req: AgentHeartbeatRequest):
     db = SessionLocal()
@@ -108,6 +155,8 @@ def agent_heartbeat(req: AgentHeartbeatRequest):
         machine.last_heartbeat_at = datetime.now()
         if req.current_user:
             machine.current_user = req.current_user
+        if req.agent_version:
+            machine.agent_version = req.agent_version
         if req.cpu_usage is not None:
             machine.cpu_usage = req.cpu_usage
         if req.memory_usage is not None:
@@ -121,13 +170,29 @@ def agent_heartbeat(req: AgentHeartbeatRequest):
         if agent:
             agent.service_status = req.service_status or "running"
             agent.last_report_at = datetime.now()
+            if req.agent_version:
+                agent.agent_version = req.agent_version
             if req.agent_config_content:
                 agent.agent_config_content = req.agent_config_content
             if req.agent_config_path:
                 agent.agent_config_path = req.agent_config_path
 
         db.commit()
-        return {"status": "ok"}
+
+        # Check if agent needs upgrade
+        result = {"status": "ok"}
+        if req.agent_version:
+            version_file = os.path.join(settings.UPLOAD_DIR, "agent", "version.txt")
+            exe_path = os.path.join(settings.UPLOAD_DIR, "agent", "OpenClawCenterAgent.exe")
+            if os.path.exists(version_file) and os.path.exists(exe_path):
+                with open(version_file, "r") as f:
+                    latest = f.read().strip()
+                if _parse_version(latest) > _parse_version(req.agent_version):
+                    result["upgrade"] = {
+                        "version": latest,
+                        "download_url": "/api/agent/download",
+                    }
+        return result
     finally:
         db.close()
 

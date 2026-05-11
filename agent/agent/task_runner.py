@@ -57,9 +57,10 @@ def execute_task(config, task):
             # Skill sync - download and install skill package
             payload_data = json.loads(payload) if isinstance(payload, str) else payload
             package_url = payload_data.get("package_url", "")
-            target_dir = payload_data.get("install_path", "")
+            install_path = payload_data.get("install_path", "")
+            skill_code = payload_data.get("skill_code", "")
             checksum = payload_data.get("checksum", "")
-            if package_url and target_dir:
+            if package_url and install_path:
                 import os
                 import hashlib
                 full_url = package_url if package_url.startswith("http") else f"{config.center_url}{package_url}"
@@ -72,6 +73,8 @@ def execute_task(config, task):
                         report_task_result(config, task_item_id, "failed", message)
                         return
                 import zipfile, io
+                # Extract into install_path/skill_code/ so skill lives in its own folder
+                target_dir = os.path.join(install_path, skill_code) if skill_code else install_path
                 os.makedirs(target_dir, exist_ok=True)
                 # Backup existing
                 from agent.prompt_sync import DEFAULT_BACKUP_DIR
