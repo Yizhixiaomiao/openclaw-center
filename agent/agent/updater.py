@@ -37,11 +37,10 @@ def handle_upgrade(config, upgrade_info):
     current_exe = sys.executable
     bat_script = os.path.join(temp_dir, "_upgrade.bat")
 
-    # bat script: wait for process exit, replace exe, restart service or console
+    # bat script: wait for process exit, replace exe, restart via scheduled task or direct
     with open(bat_script, "w", encoding="gbk") as f:
         f.write(f'''@echo off
 echo Upgrading OpenClawCenterAgent...
-sc stop OpenClawCenterAgent >nul 2>&1
 taskkill /f /im OpenClawCenterAgent.exe >nul 2>&1
 timeout /t 2 /nobreak >nul
 :retry
@@ -58,7 +57,7 @@ if errorlevel 1 (
 del /f "{new_exe}"
 echo Upgrade successful, restarting...
 timeout /t 1 /nobreak >nul
-sc start OpenClawCenterAgent >nul 2>&1
+schtasks /run /tn OpenClawCenterAgent >nul 2>&1
 if errorlevel 1 (
     start "" "{current_exe}"
 )

@@ -40,14 +40,7 @@ def main():
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
 
-    # --service mode: delegate to pywin32 HandleCommandLine immediately
-    # (install/remove/start/stop commands must not trigger interactive setup)
-    if "--service" in sys.argv:
-        from agent.service import run_as_service
-        run_as_service()
-        return
-
-    config_path = sys.argv[1] if len(sys.argv) > 1 else None
+    config_path = sys.argv[1] if len(sys.argv) > 1 and not sys.argv[1].startswith("--") else None
     config = AgentConfig(config_path)
 
     # First-run setup: ensure center_url and machine_code are configured
@@ -66,21 +59,21 @@ def main():
         logger.error("Registration failed, exiting")
         sys.exit(1)
 
-    # Auto-install as Windows service after first registration
-    from agent.service import is_service_installed, install_service, start_service, is_admin
-    if not is_service_installed():
+    # Auto-install as scheduled task for auto-start after first registration
+    from agent.service import is_task_installed, install_task, start_task, is_admin
+    if not is_task_installed():
         if is_admin():
             try:
-                install_service()
-                start_service()
-                logger.info("Agent registered as Windows service. Starting service mode...")
-                print("Agent 已注册为 Windows 服务并启动，本窗口将自动关闭。")
+                install_task()
+                start_task()
+                logger.info("Agent registered as scheduled task (auto-start on boot). Task started.")
+                print("Agent 已注册为计划任务（开机自启）并启动，本窗口将自动关闭。")
                 return
             except Exception as e:
-                logger.warning("Failed to install service: %s (will run in console mode)", e)
+                logger.warning("Failed to install scheduled task: %s (will run in console mode)", e)
         else:
-            logger.warning("Not running as admin - cannot install service. Run as administrator to enable auto-start.")
-            print("提示：以管理员身份运行可自动注册为 Windows 服务，实现开机自启。")
+            logger.warning("Not running as admin - cannot install scheduled task. Run as administrator to enable auto-start.")
+            print("提示：以管理员身份运行可自动注册为计划任务，实现开机自启。")
 
     # Start background threads
     threads = [
