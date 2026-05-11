@@ -3,7 +3,7 @@
     <!-- Agent 下载提示 -->
     <el-alert type="info" :closable="false" class="agent-download-alert">
       <template #title>
-        <span>Agent 安装：在目标机器上执行以下 PowerShell 命令即可下载并运行 Agent</span>
+        <span>Agent 安装：以管理员身份在目标机器上执行以下 PowerShell 命令即可下载并运行 Agent（将自动注册为计划任务，开机自启）</span>
       </template>
       <div class="agent-download-info">
         <div class="agent-download-cmd">
