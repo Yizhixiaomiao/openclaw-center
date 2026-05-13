@@ -41,6 +41,9 @@ class AgentInfo(Base):
     last_report_at = Column(DateTime, nullable=True)
     agent_config_content = Column(Text)
     agent_config_path = Column(String(512))
+    user_md_content = Column(Text)
+    identify_md_content = Column(Text)
+    profiles_dir = Column(String(512))
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
 

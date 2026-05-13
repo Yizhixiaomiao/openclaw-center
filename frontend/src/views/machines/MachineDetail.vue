@@ -1,13 +1,15 @@
 <template>
-  <div class="machine-detail">
+  <div class="oc-page">
     <!-- 顶部操作栏 -->
-    <div class="page-header">
-      <el-button :icon="ArrowLeft" @click="goBack">返回</el-button>
-      <span class="page-title">机器详情</span>
+    <div class="oc-page-header">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <el-button :icon="ArrowLeft" @click="goBack">返回</el-button>
+        <h1 class="oc-page-header__title">机器详情</h1>
+      </div>
     </div>
 
     <!-- 基本信息 -->
-    <el-card v-loading="loading" shadow="never" class="info-card">
+    <el-card v-loading="loading" shadow="never" class="oc-table-card">
       <template #header>
         <span>基本信息</span>
       </template>
@@ -21,15 +23,15 @@
         <el-descriptions-item label="内存">{{ machine.memory }}</el-descriptions-item>
         <el-descriptions-item label="CPU使用率">
           <span v-if="machine.cpu_usage != null">{{ machine.cpu_usage.toFixed(1) }}%</span>
-          <span v-else style="color: #ccc">-</span>
+          <span v-else class="oc-text-placeholder">-</span>
         </el-descriptions-item>
         <el-descriptions-item label="内存使用率">
           <span v-if="machine.memory_usage != null">{{ machine.memory_usage.toFixed(1) }}%</span>
-          <span v-else style="color: #ccc">-</span>
+          <span v-else class="oc-text-placeholder">-</span>
         </el-descriptions-item>
         <el-descriptions-item label="磁盘使用率">
           <span v-if="machine.disk_usage != null">{{ machine.disk_usage.toFixed(1) }}%</span>
-          <span v-else style="color: #ccc">-</span>
+          <span v-else class="oc-text-placeholder">-</span>
         </el-descriptions-item>
         <el-descriptions-item label="用户ID">{{ machine.user_id }}</el-descriptions-item>
         <el-descriptions-item label="当前用户">{{ machine.current_user || '-' }}</el-descriptions-item>
@@ -39,11 +41,16 @@
         <el-descriptions-item label="最近心跳">
           {{ machine.last_heartbeat_at ? formatDateTime(machine.last_heartbeat_at) : '从未上线' }}
         </el-descriptions-item>
+        <el-descriptions-item v-if="accessLinks.length" label="远程访问">
+          <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <el-button v-for="link in accessLinks" :key="link.url" type="primary" size="small" @click="openAccessLink(link.url)">{{ link.label }}</el-button>
+          </div>
+        </el-descriptions-item>
       </el-descriptions>
     </el-card>
 
     <!-- 标签页 -->
-    <el-card shadow="never" class="tabs-card">
+    <el-card shadow="never" class="oc-table-card">
       <el-tabs v-model="activeTab">
         <!-- Agent 信息 -->
         <el-tab-pane label="Agent信息" name="agent">
@@ -60,6 +67,25 @@
               </el-descriptions-item>
               <el-descriptions-item label="配置文件路径">{{ machine.agent.agent_config_path || '-' }}</el-descriptions-item>
             </el-descriptions>
+
+            <!-- 用户设定目录配置 -->
+            <el-card shadow="never" style="margin-bottom: 16px; border: 1px dashed var(--oc-border-color);">
+              <template #header>
+                <span style="font-weight: 600">用户设定目录</span>
+              </template>
+              <el-form :inline="true" style="margin-bottom: 0">
+                <el-form-item label="目录路径" style="margin-bottom: 0; flex: 1">
+                  <el-input v-model="profilesDir" placeholder="如 C:\OpenClaw\profiles" style="width: 400px" />
+                </el-form-item>
+                <el-form-item style="margin-bottom: 0">
+                  <el-button type="primary" size="small" :loading="profilesDirSaving" @click="saveProfilesDir">保存并下发</el-button>
+                </el-form-item>
+              </el-form>
+              <div style="color: var(--oc-text-tertiary); font-size: 12px; margin-top: 8px">
+                用于存放 USER.md 和 IDENTITY.md 文件，Agent 将从此目录采集用户设定信息
+              </div>
+            </el-card>
+
             <div style="margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center">
               <span style="font-weight: 600">Agent 配置</span>
               <div>
@@ -103,6 +129,42 @@
             />
           </div>
           <el-empty v-else description="暂无配置信息" />
+        </el-tab-pane>
+
+        <!-- 用户设定 -->
+        <el-tab-pane label="用户设定" name="profiles">
+          <div v-if="machine.agent">
+            <el-descriptions :column="1" border style="margin-bottom: 16px">
+              <el-descriptions-item label="配置目录">{{ machine.agent.profiles_dir || '-' }}</el-descriptions-item>
+            </el-descriptions>
+
+            <div style="margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center">
+              <span style="font-weight: 600">USER.md</span>
+              <div>
+                <el-button size="small" :loading="syncing" @click="handleSync">同步</el-button>
+                <el-button type="primary" size="small" :loading="profilesSaving" @click="saveProfiles">保存并下发</el-button>
+              </div>
+            </div>
+            <el-input
+              v-model="userMdContent"
+              type="textarea"
+              :rows="10"
+              placeholder="暂无 USER.md 内容"
+              style="font-family: monospace; margin-bottom: 20px"
+            />
+
+            <div style="margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center">
+              <span style="font-weight: 600">IDENTITY.md</span>
+            </div>
+            <el-input
+              v-model="identifyMdContent"
+              type="textarea"
+              :rows="10"
+              placeholder="暂无 IDENTITY.md 内容"
+              style="font-family: monospace"
+            />
+          </div>
+          <el-empty v-else description="暂无Agent信息" />
         </el-tab-pane>
 
         <!-- 已安装技能 -->
@@ -197,7 +259,7 @@
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ArrowLeft } from '@element-plus/icons-vue'
-import { getMachine, updateMachineConfig, updateAgentConfig, syncMachine as syncMachineApi } from '../../api/machine'
+import { getMachine, updateMachineConfig, updateAgentConfig, syncMachine as syncMachineApi, updateMachineProfiles } from '../../api/machine'
 import { getSkillDetail } from '../../api/skill'
 import { ElMessage } from 'element-plus'
 
@@ -207,6 +269,7 @@ const machineId = route.params.id
 
 const loading = ref(false)
 const machine = ref({})
+const accessLinks = ref([])
 const activeTab = ref('agent')
 
 // ---------- 状态映射 ----------
@@ -266,11 +329,21 @@ async function loadData() {
       logs: data.recent_logs || [],
       deploy_items: data.recent_deploys || [],
     }
+    accessLinks.value = data.access_links || []
     if (machine.value.config?.config_content) {
       configContent.value = machine.value.config.config_content
     }
     if (machine.value.agent?.agent_config_content) {
       agentConfigContent.value = machine.value.agent.agent_config_content
+    }
+    if (machine.value.agent?.user_md_content) {
+      userMdContent.value = machine.value.agent.user_md_content
+    }
+    if (machine.value.agent?.identify_md_content) {
+      identifyMdContent.value = machine.value.agent.identify_md_content
+    }
+    if (machine.value.agent?.profiles_dir) {
+      profilesDir.value = machine.value.agent.profiles_dir
     }
   } catch {
     // 已由拦截器处理
@@ -319,6 +392,51 @@ async function saveAgentConfig() {
   }
 }
 
+// ---------- 用户设定编辑 ----------
+const userMdContent = ref('')
+const identifyMdContent = ref('')
+const profilesSaving = ref(false)
+const profilesDir = ref('')
+const profilesDirSaving = ref(false)
+
+async function saveProfiles() {
+  profilesSaving.value = true
+  try {
+    await updateMachineProfiles(machineId, {
+      user_md_content: userMdContent.value,
+      identify_md_content: identifyMdContent.value,
+    })
+    ElMessage.success('用户设定已保存，同步任务已下发')
+    loadData()
+  } catch {
+    // handled by interceptor
+  } finally {
+    profilesSaving.value = false
+  }
+}
+
+async function saveProfilesDir() {
+  profilesDirSaving.value = true
+  try {
+    // Inject openclaw_profiles_dir into agent config YAML and save both
+    const dir = profilesDir.value.trim()
+    let yaml = agentConfigContent.value
+    if (yaml.includes('openclaw_profiles_dir:')) {
+      yaml = yaml.replace(/openclaw_profiles_dir:\s*.*/, `openclaw_profiles_dir: '${dir}'`)
+    } else {
+      yaml = yaml.trimEnd() + `\n\n# OpenClaw profiles directory containing USER.md and IDENTITY.md (optional)\nopenclaw_profiles_dir: '${dir}'\n`
+    }
+    agentConfigContent.value = yaml
+    await updateAgentConfig(machineId, { agent_config_content: yaml })
+    ElMessage.success('用户设定目录已保存，同步任务已下发')
+    loadData()
+  } catch {
+    // handled by interceptor
+  } finally {
+    profilesDirSaving.value = false
+  }
+}
+
 // ---------- 手动同步 ----------
 const syncing = ref(false)
 
@@ -356,6 +474,10 @@ async function showSkillDetail(row) {
   }
 }
 
+function openAccessLink(url) {
+  window.open(url, '_blank')
+}
+
 function goBack() {
   router.push('/machines')
 }
@@ -366,23 +488,4 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.machine-detail {
-  padding: 16px;
-}
-.page-header {
-  display: flex;
-  align-items: center;
-  margin-bottom: 16px;
-}
-.page-title {
-  font-size: 16px;
-  font-weight: 600;
-  margin-left: 12px;
-}
-.info-card {
-  margin-bottom: 16px;
-}
-.tabs-card {
-  margin-bottom: 16px;
-}
 </style>

@@ -35,24 +35,30 @@ def execute_task(config, task):
         if task_type == "prompt":
             success, message = sync_prompt(config, payload)
         elif task_type == "config":
-            # Config sync - write config file
             payload_data = json.loads(payload) if isinstance(payload, str) else payload
-            target_path = payload_data.get("target_path", "")
-            content = payload_data.get("content", "")
-            if target_path and content:
-                import os
-                os.makedirs(os.path.dirname(target_path), exist_ok=True)
-                with open(target_path, "w", encoding="utf-8") as f:
-                    f.write(content)
-                # If this is the agent's own config, reload it
-                if os.path.normpath(target_path) == os.path.normpath(config.agent_config_path):
-                    config.reload()
-                    message = f"Agent config written and reloaded: {target_path}"
-                else:
-                    message = f"Config written to {target_path}"
-                success = True
+            if payload_data.get("sync_only"):
+                # Trigger immediate config + skills sync
+                from agent.collector import report_config, sync_skills
+                report_config(config)
+                sync_skills(config)
+                success, message = True, "Config and skills sync triggered"
             else:
-                success, message = False, "No target_path or content in config payload"
+                # Write config file
+                target_path = payload_data.get("target_path", "")
+                content = payload_data.get("content", "")
+                if target_path and content:
+                    import os
+                    os.makedirs(os.path.dirname(target_path), exist_ok=True)
+                    with open(target_path, "w", encoding="utf-8") as f:
+                        f.write(content)
+                    if os.path.normpath(target_path) == os.path.normpath(config.agent_config_path):
+                        config.reload()
+                        message = f"Agent config written and reloaded: {target_path}"
+                    else:
+                        message = f"Config written to {target_path}"
+                    success = True
+                else:
+                    success, message = False, "No target_path or content in config payload"
         elif task_type == "skill":
             # Skill sync - download and install skill package
             payload_data = json.loads(payload) if isinstance(payload, str) else payload
@@ -85,6 +91,22 @@ def execute_task(config, task):
                 success, message = True, f"Skill installed to {target_dir}"
             else:
                 success, message = False, "No package_url or install_path in skill payload"
+        elif task_type == "skill_remove":
+            # Skill removal - delete local skill directory
+            payload_data = json.loads(payload) if isinstance(payload, str) else payload
+            skill_code = payload_data.get("skill_code", "")
+            install_path = payload_data.get("install_path", "") or config.openclaw_skills_dir
+            if skill_code:
+                import os
+                import shutil
+                target_dir = os.path.join(install_path, skill_code)
+                if os.path.exists(target_dir):
+                    shutil.rmtree(target_dir)
+                    success, message = True, f"Skill directory removed: {target_dir}"
+                else:
+                    success, message = True, f"Skill directory not found (already removed): {target_dir}"
+            else:
+                success, message = False, "No skill_code in skill_remove payload"
         elif task_type == "model_config":
             # Model config update
             payload_data = json.loads(payload) if isinstance(payload, str) else payload
@@ -105,6 +127,10 @@ def execute_task(config, task):
         success, message = False, str(e)
 
     report_task_result(config, task_item_id, "success" if success else "failed", message)
+
+    # Trigger immediate heartbeat so center updates status right away
+    from agent.heartbeat import send_heartbeat
+    send_heartbeat(config)
 
 
 def report_task_result(config, task_item_id, status, message=""):

@@ -1,7 +1,7 @@
 <template>
-  <div class="template-list">
-    <div class="page-header">
-      <h2>Prompt模板管理</h2>
+  <div class="oc-page">
+    <div class="oc-page-header">
+      <h1 class="oc-page-header__title">Prompt模板管理</h1>
       <el-button type="primary" @click="showAddDialog">
         <el-icon><Plus /></el-icon>
         新增模板
@@ -9,7 +9,7 @@
     </div>
 
     <!-- Filters -->
-    <el-card class="filter-card" shadow="never">
+    <el-card class="oc-filter-card" shadow="never">
       <el-form :inline="true" :model="filters" @submit.prevent="loadTemplates">
         <el-form-item label="关键词">
           <el-input
@@ -74,7 +74,7 @@
             {{ formatTime(row.created_at) }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="220" align="center" fixed="right">
+        <el-table-column label="操作" width="260" align="center" fixed="right">
           <template #default="{ row }">
             <el-button type="primary" link size="small" @click="viewDetail(row)">
               查看详情
@@ -91,11 +91,14 @@
             <el-button type="warning" link size="small" @click="handleCopy(row)">
               复制
             </el-button>
+            <el-button type="danger" link size="small" @click="handleDelete(row)">
+              删除
+            </el-button>
           </template>
         </el-table-column>
       </el-table>
 
-      <div class="pagination-wrapper">
+      <div class="oc-pagination">
         <el-pagination
           v-model:current-page="pagination.page"
           v-model:page-size="pagination.size"
@@ -172,6 +175,7 @@ import {
   createTemplate,
   publishTemplate,
   copyTemplate,
+  deleteTemplate,
 } from '../../api/prompt'
 
 const router = useRouter()
@@ -291,6 +295,21 @@ async function handleCopy(row) {
   }
 }
 
+async function handleDelete(row) {
+  try {
+    await ElMessageBox.confirm(
+      `确定要删除模板「${row.name}」吗？此操作不可恢复。`,
+      '删除确认',
+      { type: 'warning', confirmButtonText: '删除', cancelButtonText: '取消' }
+    )
+    await deleteTemplate(row.id)
+    ElMessage.success('模板已删除')
+    loadTemplates()
+  } catch {
+    // cancelled or error
+  }
+}
+
 function showAddDialog() {
   addForm.name = ''
   addForm.type = ''
@@ -345,30 +364,4 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.template-list {
-  padding: 0;
-}
-
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-}
-
-.page-header h2 {
-  margin: 0;
-  font-size: 20px;
-  font-weight: 600;
-}
-
-.filter-card {
-  margin-bottom: 16px;
-}
-
-.pagination-wrapper {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 16px;
-}
 </style>

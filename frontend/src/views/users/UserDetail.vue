@@ -1,13 +1,15 @@
 <template>
-  <div class="user-detail">
+  <div class="oc-page">
     <!-- 顶部操作栏 -->
-    <div class="page-header">
-      <el-button :icon="ArrowLeft" @click="goBack">返回</el-button>
-      <span class="page-title">用户详情</span>
+    <div class="oc-page-header">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <el-button :icon="ArrowLeft" @click="goBack">返回</el-button>
+        <h1 class="oc-page-header__title">用户详情</h1>
+      </div>
     </div>
 
     <!-- 基本信息 -->
-    <el-card v-loading="loading" shadow="never" class="info-card">
+    <el-card v-loading="loading" shadow="never" class="oc-table-card">
       <template #header>
         <span>基本信息</span>
       </template>
@@ -31,7 +33,7 @@
     </el-card>
 
     <!-- 标签页 -->
-    <el-card shadow="never" class="tabs-card">
+    <el-card shadow="never" class="oc-table-card">
       <el-tabs v-model="activeTab">
         <!-- 职责画像 -->
         <el-tab-pane label="职责画像" name="profile">
@@ -289,23 +291,4 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.user-detail {
-  padding: 16px;
-}
-.page-header {
-  display: flex;
-  align-items: center;
-  margin-bottom: 16px;
-}
-.page-title {
-  font-size: 16px;
-  font-weight: 600;
-  margin-left: 12px;
-}
-.info-card {
-  margin-bottom: 16px;
-}
-.tabs-card {
-  margin-bottom: 16px;
-}
 </style>

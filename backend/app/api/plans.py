@@ -15,7 +15,7 @@ from app.schemas.plan import (
 router = APIRouter()
 
 
-@router.get("", response_model=List[CodingPlanResponse])
+@router.get("")
 def list_plans(
     provider: Optional[str] = None,
     status: Optional[str] = None,
@@ -29,7 +29,9 @@ def list_plans(
         q = q.filter(CodingPlan.provider == provider)
     if status:
         q = q.filter(CodingPlan.status == status)
-    return q.order_by(CodingPlan.created_at.desc()).offset(skip).limit(limit).all()
+    total = q.count()
+    items = q.order_by(CodingPlan.created_at.desc()).offset(skip).limit(limit).all()
+    return {"items": [CodingPlanResponse.model_validate(p).model_dump() for p in items], "total": total}
 
 
 @router.post("", response_model=CodingPlanResponse, status_code=201)
@@ -72,6 +74,22 @@ def update_plan(
     db.commit()
     db.refresh(plan)
     return plan
+
+
+@router.delete("/{plan_id}")
+def delete_plan(
+    plan_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role("admin")),
+):
+    plan = db.query(CodingPlan).filter(CodingPlan.id == plan_id).first()
+    if not plan:
+        raise HTTPException(status_code=404, detail="Plan not found")
+    db.query(PlanBinding).filter(PlanBinding.plan_id == plan_id).delete()
+    db.query(UsageRecord).filter(UsageRecord.plan_id == plan_id).delete()
+    db.delete(plan)
+    db.commit()
+    return {"status": "ok", "message": "套餐已删除"}
 
 
 @router.post("/{plan_id}/bindings", response_model=PlanBindingResponse, status_code=201)

@@ -1,14 +1,18 @@
 <template>
   <div class="sidebar-container">
     <div class="sidebar-logo">
+      <svg class="sidebar-logo-icon" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M14 2C9 2 5 6 5 11c0 3 1.5 5.5 4 7l1.5-3C9 13.5 8 11.5 8 10c0-3.5 3-6 6-6s6 2.5 6 6c0 1.5-1 3.5-2.5 5L19 18c2.5-1.5 4-4 4-7 0-5-4-9-9-9z" fill="currentColor"/>
+        <path d="M10 17c-1 2-1.5 4-1 6 .2.6.8 1 1.4 1h7.2c.6 0 1.2-.4 1.4-1 .5-2 0-4-1-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" fill="none"/>
+        <circle cx="11" cy="23" r="1.2" fill="currentColor"/>
+        <circle cx="17" cy="23" r="1.2" fill="currentColor"/>
+        <circle cx="14" cy="25" r="1.2" fill="currentColor"/>
+      </svg>
       <h1>OpenClaw Center</h1>
     </div>
     <el-scrollbar>
       <el-menu
         :default-active="activeMenu"
-        :background-color="'#304156'"
-        :text-color="'#bfcbd9'"
-        :active-text-color="'#409EFF'"
         router
       >
         <el-menu-item index="/dashboard">
@@ -86,28 +90,7 @@ const activeMenu = computed(() => {
   overflow: hidden;
 }
 
-.sidebar-logo {
-  height: 50px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #263445;
-}
-
-.sidebar-logo h1 {
-  color: #fff;
-  font-size: 16px;
-  font-weight: 600;
-  margin: 0;
-  white-space: nowrap;
-  letter-spacing: 1px;
-}
-
 .el-scrollbar {
   flex: 1;
-}
-
-.el-menu {
-  border-right: none;
 }
 </style>

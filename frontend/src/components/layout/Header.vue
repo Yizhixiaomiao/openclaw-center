@@ -5,7 +5,7 @@
       <el-breadcrumb-item v-if="currentPageTitle">{{ currentPageTitle }}</el-breadcrumb-item>
     </el-breadcrumb>
     <div style="display: flex; align-items: center; gap: 16px;">
-      <span style="color: #606266;">{{ authStore.userName }}</span>
+      <span class="oc-text-secondary">{{ authStore.userName }}</span>
       <el-tag size="small" type="info">{{ roleLabel }}</el-tag>
       <el-button type="danger" text @click="handleLogout">退出登录</el-button>
     </div>

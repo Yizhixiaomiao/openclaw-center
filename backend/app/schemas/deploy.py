@@ -13,7 +13,7 @@ class DeployTaskCreate(BaseModel):
 class SkillDistributeRequest(BaseModel):
     skill_code: str
     machine_ids: List[int]
-    install_path: str = "C:\\OpenClaw\\skills"
+    install_path: str = ""
 
 
 class DeployTaskResponse(BaseModel):

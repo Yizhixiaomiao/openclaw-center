@@ -1,7 +1,7 @@
 <template>
-  <div class="user-list">
+  <div class="oc-page">
     <!-- 搜索筛选区 -->
-    <el-card class="filter-card" shadow="never">
+    <el-card class="oc-filter-card" shadow="never">
       <el-form :model="filters" inline>
         <el-form-item label="关键词">
           <el-input v-model="filters.keyword" placeholder="姓名/用户名" clearable style="width: 180px" @keyup.enter="handleSearch" />
@@ -32,11 +32,11 @@
           <el-button :icon="Refresh" @click="handleReset">重置</el-button>
         </el-form-item>
       </el-form>
-      <el-button type="success" :icon="Plus" @click="openDialog('create')">新增用户</el-button>
+      <el-button type="primary" :icon="Plus" @click="openDialog('create')">新增用户</el-button>
     </el-card>
 
     <!-- 数据表格 -->
-    <el-card shadow="never" class="table-card">
+    <el-card shadow="never" class="oc-table-card">
       <el-table v-loading="loading" :data="tableData" border stripe style="width: 100%">
         <el-table-column prop="id" label="ID" width="70" align="center" />
         <el-table-column prop="name" label="姓名" min-width="100" />
@@ -56,15 +56,16 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="140" align="center" fixed="right">
+        <el-table-column label="操作" width="180" align="center" fixed="right">
           <template #default="{ row }">
             <el-button link type="primary" size="small" @click="openDialog('edit', row)">编辑</el-button>
-            <el-button link type="primary" size="small" @click="goDetail(row.id)">查看</el-button>
+            <el-button link type="primary" size="small" style="margin-left: 8px" @click="goDetail(row.id)">查看</el-button>
+            <el-button link type="danger" size="small" style="margin-left: 8px" @click="handleDelete(row)">删除</el-button>
           </template>
         </el-table-column>
       </el-table>
 
-      <div class="pagination-wrapper">
+      <div class="oc-pagination">
         <el-pagination
           v-model:current-page="pagination.page"
           v-model:page-size="pagination.size"
@@ -136,7 +137,7 @@ import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Refresh, Plus } from '@element-plus/icons-vue'
-import { getUsers, createUser, updateUser } from '../../api/user'
+import { getUsers, createUser, updateUser, deleteUser } from '../../api/user'
 
 const router = useRouter()
 
@@ -282,6 +283,26 @@ function goDetail(id) {
   router.push(`/users/${id}`)
 }
 
+// ---------- 删除 ----------
+async function handleDelete(row) {
+  try {
+    await ElMessageBox.confirm(`确定要删除用户「${row.name}」吗？此操作不可恢复。`, '删除确认', {
+      confirmButtonText: '删除',
+      cancelButtonText: '取消',
+      type: 'warning',
+    })
+  } catch {
+    return
+  }
+  try {
+    await deleteUser(row.id)
+    ElMessage.success('用户已删除')
+    fetchData()
+  } catch {
+    // handled by interceptor
+  }
+}
+
 // ---------- 初始化 ----------
 onMounted(() => {
   fetchData()
@@ -289,21 +310,4 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.user-list {
-  padding: 16px;
-}
-.filter-card {
-  margin-bottom: 16px;
-}
-.filter-card :deep(.el-form-item) {
-  margin-bottom: 12px;
-}
-.table-card {
-  margin-bottom: 16px;
-}
-.pagination-wrapper {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 16px;
-}
 </style>

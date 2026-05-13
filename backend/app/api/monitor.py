@@ -95,6 +95,7 @@ def monitor_logs(
         q = q.filter(AgentLog.level == level)
     if category:
         q = q.filter(AgentLog.category == category)
+    total = q.count()
     logs = q.order_by(AgentLog.created_at.desc()).offset(skip).limit(limit).all()
 
     # Enrich logs with machine info
@@ -102,10 +103,10 @@ def monitor_logs(
     machines = db.query(Machine).filter(Machine.id.in_(machine_ids)).all() if machine_ids else []
     machine_map = {m.id: m for m in machines}
 
-    result = []
+    items = []
     for log in logs:
         m = machine_map.get(log.machine_id)
-        result.append({
+        items.append({
             "id": log.id,
             "machine_id": log.machine_id,
             "machine_code": m.code if m else None,
@@ -116,7 +117,7 @@ def monitor_logs(
             "message": log.message,
             "created_at": str(log.created_at),
         })
-    return result
+    return {"items": items, "total": total}
 
 
 @router.get("/alerts")

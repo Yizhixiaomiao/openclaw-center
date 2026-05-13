@@ -1,7 +1,7 @@
 <template>
-  <div class="monitor-view">
-    <div class="page-header">
-      <h2>监控中心</h2>
+  <div class="oc-page">
+    <div class="oc-page-header">
+      <h1 class="oc-page-header__title">监控中心</h1>
       <el-button @click="refreshAll">
         <el-icon><Refresh /></el-icon>
         刷新
@@ -11,45 +11,33 @@
     <!-- Stat Cards -->
     <el-row :gutter="16" class="stat-row">
       <el-col :span="6">
-        <el-card shadow="hover" class="stat-card">
-          <div class="stat-content">
-            <div class="stat-label">总机器数</div>
-            <div class="stat-value">{{ overview.total_machines ?? '-' }}</div>
-          </div>
-          <el-icon class="stat-icon" :size="40" color="#409EFF"><Monitor /></el-icon>
+        <el-card shadow="never">
+          <div class="oc-metric-value">{{ overview.total_machines ?? '-' }}</div>
+          <div class="oc-metric-label">总机器数</div>
         </el-card>
       </el-col>
       <el-col :span="6">
-        <el-card shadow="hover" class="stat-card">
-          <div class="stat-content">
-            <div class="stat-label">在线数</div>
-            <div class="stat-value online">{{ overview.online_machines ?? '-' }}</div>
-          </div>
-          <el-icon class="stat-icon" :size="40" color="#67C23A"><CircleCheck /></el-icon>
+        <el-card shadow="never">
+          <div class="oc-metric-value oc-status-ok">{{ overview.online_machines ?? '-' }}</div>
+          <div class="oc-metric-label">在线数</div>
         </el-card>
       </el-col>
       <el-col :span="6">
-        <el-card shadow="hover" class="stat-card">
-          <div class="stat-content">
-            <div class="stat-label">离线数</div>
-            <div class="stat-value offline">{{ overview.offline_machines ?? '-' }}</div>
-          </div>
-          <el-icon class="stat-icon" :size="40" color="#909399"><CircleClose /></el-icon>
+        <el-card shadow="never">
+          <div class="oc-metric-value oc-status-info">{{ overview.offline_machines ?? '-' }}</div>
+          <div class="oc-metric-label">离线数</div>
         </el-card>
       </el-col>
       <el-col :span="6">
-        <el-card shadow="hover" class="stat-card">
-          <div class="stat-content">
-            <div class="stat-label">异常数</div>
-            <div class="stat-value error">{{ overview.error_machines ?? '-' }}</div>
-          </div>
-          <el-icon class="stat-icon" :size="40" color="#F56C6C"><WarningFilled /></el-icon>
+        <el-card shadow="never">
+          <div class="oc-metric-value oc-status-error">{{ overview.error_machines ?? '-' }}</div>
+          <div class="oc-metric-label">异常数</div>
         </el-card>
       </el-col>
     </el-row>
 
     <!-- Machine Status Grid -->
-    <el-card shadow="never" class="section-card">
+    <el-card shadow="never" class="oc-table-card">
       <template #header>
         <span>机器状态</span>
       </template>
@@ -77,11 +65,11 @@
         <el-table-column label="资源使用率" width="240">
           <template #default="{ row }">
             <span v-if="row.cpu_usage != null">CPU {{ row.cpu_usage.toFixed(0) }}% </span>
-            <span v-else style="color:#ccc">CPU - </span>
+            <span v-else class="oc-text-placeholder">CPU - </span>
             <span v-if="row.memory_usage != null">MEM {{ row.memory_usage.toFixed(0) }}% </span>
-            <span v-else style="color:#ccc">MEM - </span>
+            <span v-else class="oc-text-placeholder">MEM - </span>
             <span v-if="row.disk_usage != null">DISK {{ row.disk_usage.toFixed(0) }}%</span>
-            <span v-else style="color:#ccc">DISK -</span>
+            <span v-else class="oc-text-placeholder">DISK -</span>
           </template>
         </el-table-column>
         <el-table-column prop="last_heartbeat_at" label="最近心跳" width="170" align="center">
@@ -93,7 +81,7 @@
     </el-card>
 
     <!-- Alert List -->
-    <el-card shadow="never" class="section-card">
+    <el-card shadow="never" class="oc-table-card">
       <template #header>
         <span>告警列表</span>
       </template>
@@ -123,7 +111,7 @@
     </el-card>
 
     <!-- Log Viewer -->
-    <el-card shadow="never" class="section-card">
+    <el-card shadow="never" class="oc-table-card">
       <template #header>
         <span>日志查看</span>
       </template>
@@ -191,7 +179,7 @@
         </el-table-column>
       </el-table>
 
-      <div class="pagination-wrapper">
+      <div class="oc-pagination">
         <el-pagination
           v-model:current-page="logPagination.page"
           v-model:page-size="logPagination.size"
@@ -210,10 +198,6 @@
 import { ref, reactive, onMounted } from 'vue'
 import {
   Refresh,
-  Monitor,
-  CircleCheck,
-  CircleClose,
-  WarningFilled,
 } from '@element-plus/icons-vue'
 import {
   getMonitorOverview,
@@ -344,77 +328,8 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.monitor-view {
-  padding: 0;
-}
-
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-}
-
-.page-header h2 {
-  margin: 0;
-  font-size: 20px;
-  font-weight: 600;
-}
-
 .stat-row {
-  margin-bottom: 16px;
-}
-
-.stat-card {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 12px;
-}
-
-.stat-card :deep(.el-card__body) {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  padding: 20px;
-}
-
-.stat-content {
-  flex: 1;
-}
-
-.stat-label {
-  font-size: 14px;
-  color: #909399;
-  margin-bottom: 8px;
-}
-
-.stat-value {
-  font-size: 28px;
-  font-weight: 700;
-  color: #303133;
-}
-
-.stat-value.online {
-  color: #67C23A;
-}
-
-.stat-value.offline {
-  color: #909399;
-}
-
-.stat-value.error {
-  color: #F56C6C;
-}
-
-.stat-icon {
-  flex-shrink: 0;
-  opacity: 0.6;
-}
-
-.section-card {
-  margin-bottom: 16px;
+  margin-bottom: 0;
 }
 
 .log-filter-form {
@@ -431,17 +346,11 @@ onMounted(() => {
 }
 
 .status-dot.online {
-  background-color: #67C23A;
-  box-shadow: 0 0 4px #67C23A;
+  background-color: #16a34a;
+  box-shadow: 0 0 4px #16a34a;
 }
 
 .status-dot.offline {
-  background-color: #909399;
-}
-
-.pagination-wrapper {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 16px;
+  background-color: #6b7280;
 }
 </style>

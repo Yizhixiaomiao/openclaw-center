@@ -1,13 +1,13 @@
 <template>
   <el-container style="height: 100vh">
-    <el-aside width="220px" style="background: #304156">
+    <el-aside width="220px" class="app-sidebar">
       <Sidebar />
     </el-aside>
     <el-container>
-      <el-header style="background: #fff; border-bottom: 1px solid #e6e6e6; padding: 0 20px; display: flex; align-items: center; justify-content: space-between;">
+      <el-header class="app-topbar">
         <Header />
       </el-header>
-      <el-main style="background: #f0f2f5; padding: 20px;">
+      <el-main class="app-main-content">
         <router-view />
       </el-main>
     </el-container>

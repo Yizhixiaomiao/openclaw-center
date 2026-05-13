@@ -216,13 +216,20 @@ def agent_config_report(req: AgentConfigReportRequest):
         )
         db.add(config)
 
+        # Update profiles (USER.md/IDENTITY.md) in AgentInfo
+        agent = db.query(AgentInfo).filter(AgentInfo.machine_id == machine.id).first()
+        if agent:
+            if req.user_md_content is not None:
+                agent.user_md_content = req.user_md_content
+            if req.identify_md_content is not None:
+                agent.identify_md_content = req.identify_md_content
+            if req.profiles_dir is not None:
+                agent.profiles_dir = req.profiles_dir
+
         # Update machine skills (metadata only)
         if req.skills:
             try:
                 skills_data = json.loads(req.skills)
-                db.query(MachineSkill).filter(
-                    MachineSkill.machine_id == machine.id
-                ).delete()
                 for s in skills_data if isinstance(skills_data, list) else []:
                     code = s.get("code")
                     if not code:
@@ -239,13 +246,23 @@ def agent_config_report(req: AgentConfigReportRequest):
                         )
                         db.add(skill)
                         db.flush()
-                    ms = MachineSkill(
-                        machine_id=machine.id,
-                        skill_id=skill.id,
-                        installed_version=s.get("version"),
-                        status="installed",
-                    )
-                    db.add(ms)
+                    # Skip if explicitly removed by admin (don't restore)
+                    existing = db.query(MachineSkill).filter(
+                        MachineSkill.machine_id == machine.id,
+                        MachineSkill.skill_id == skill.id,
+                    ).first()
+                    if existing:
+                        if existing.status == "removed":
+                            continue
+                        existing.installed_version = s.get("version")
+                    else:
+                        ms = MachineSkill(
+                            machine_id=machine.id,
+                            skill_id=skill.id,
+                            installed_version=s.get("version"),
+                            status="installed",
+                        )
+                        db.add(ms)
             except (json.JSONDecodeError, TypeError):
                 pass
 

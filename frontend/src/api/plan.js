@@ -27,3 +27,7 @@ export function createPlanBinding(planId, data) {
 export function getPlanCostStats(planId) {
   return request.get(`/coding-plans/${planId}/cost-stats`)
 }
+
+export function deletePlan(id) {
+  return request.delete(`/coding-plans/${id}`)
+}

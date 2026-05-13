@@ -1,0 +1,76 @@
+:root {
+  /* Brand Colors */
+  --oc-color-primary: #dc3545;
+  --oc-color-primary-hover: #c82333;
+  --oc-color-primary-active: #bd2130;
+  --oc-color-primary-light-3: #e96775;
+  --oc-color-primary-light-5: #f1a1a9;
+  --oc-color-primary-light-7: #f8d0d3;
+  --oc-color-primary-light-8: #fbe2e4;
+  --oc-color-primary-light-9: #fdf0f0;
+
+  /* Status Colors */
+  --oc-color-success: #16a34a;
+  --oc-color-success-bg: #dcfce7;
+  --oc-color-warning: #ea580c;
+  --oc-color-warning-bg: #fef3c7;
+  --oc-color-danger: #dc2626;
+  --oc-color-danger-bg: #fee2e2;
+  --oc-color-info: #6b7280;
+  --oc-color-info-bg: #f3f4f6;
+
+  /* Text Colors */
+  --oc-text-primary: #111827;
+  --oc-text-regular: #374151;
+  --oc-text-secondary: #6b7280;
+  --oc-text-placeholder: #9ca3af;
+  --oc-text-disabled: #d1d5db;
+
+  /* Background Colors */
+  --oc-bg-page: #f3f4f6;
+  --oc-bg-white: #ffffff;
+  --oc-bg-card: #ffffff;
+  --oc-bg-sidebar: #fafafa;
+  --oc-bg-input: #fafafa;
+  --oc-bg-table-header: #f9fafb;
+  --oc-bg-hover: #f9fafb;
+
+  /* Border Colors */
+  --oc-border-color: #e5e7eb;
+  --oc-border-color-light: #f3f4f6;
+  --oc-border-color-hover: #d1d5db;
+
+  /* Border Radius */
+  --oc-radius-sm: 6px;
+  --oc-radius-base: 8px;
+  --oc-radius-lg: 12px;
+  --oc-radius-xl: 16px;
+  --oc-radius-pill: 20px;
+
+  /* Shadows */
+  --oc-shadow-card-hover: 0 1px 3px rgba(0, 0, 0, 0.06);
+  --oc-shadow-dialog: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  --oc-shadow-dropdown: 0 4px 12px rgba(0, 0, 0, 0.08);
+
+  /* Font Size */
+  --oc-font-xs: 11px;
+  --oc-font-sm: 12px;
+  --oc-font-base: 13px;
+  --oc-font-md: 14px;
+  --oc-font-lg: 16px;
+  --oc-font-xl: 22px;
+  --oc-font-2xl: 28px;
+
+  /* Spacing */
+  --oc-space-1: 4px;
+  --oc-space-2: 8px;
+  --oc-space-3: 12px;
+  --oc-space-4: 16px;
+  --oc-space-5: 20px;
+  --oc-space-6: 24px;
+  --oc-space-8: 32px;
+
+  /* Layout */
+  --oc-sidebar-width: 220px;
+  --oc-topbar-height: 64px;
+}

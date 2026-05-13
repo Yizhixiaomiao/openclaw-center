@@ -1,5 +1,5 @@
 <template>
-  <div class="machine-list">
+  <div class="oc-page">
     <!-- Agent 下载提示 -->
     <el-alert type="info" :closable="false" class="agent-download-alert">
       <template #title>
@@ -7,7 +7,7 @@
       </template>
       <div class="agent-download-info">
         <div class="agent-download-cmd">
-          <code>Invoke-WebRequest -Uri "http://{{ centerHost }}:8000/api/agent/download" -OutFile "OpenClawCenterAgent.exe"; .\OpenClawCenterAgent.exe</code>
+          <code>Invoke-WebRequest -Uri "http://{{ centerUrl }}/api/agent/download" -OutFile "OpenClawCenterAgent.exe"; .\OpenClawCenterAgent.exe</code>
           <el-button type="primary" link size="small" @click="copyAgentCmd">复制</el-button>
         </div>
         <div class="agent-version-row">
@@ -18,7 +18,7 @@
     </el-alert>
 
     <!-- 搜索筛选区 -->
-    <el-card class="filter-card" shadow="never">
+    <el-card class="oc-filter-card" shadow="never">
       <el-form :model="filters" inline>
         <el-form-item label="关键词">
           <el-input v-model="filters.keyword" placeholder="机器码/主机名/IP" clearable style="width: 200px" @keyup.enter="handleSearch" />
@@ -36,11 +36,11 @@
           <el-button :icon="Refresh" @click="handleReset">重置</el-button>
         </el-form-item>
       </el-form>
-      <el-button type="success" :icon="Plus" @click="openDialog">新增机器</el-button>
+      <el-button type="primary" :icon="Plus" @click="openDialog">新增机器</el-button>
     </el-card>
 
     <!-- 数据表格 -->
-    <el-card shadow="never" class="table-card">
+    <el-card shadow="never" class="oc-table-card">
       <el-table v-loading="loading" :data="tableData" border stripe style="width: 100%">
         <el-table-column prop="id" label="编号" width="70" align="center" />
         <el-table-column prop="code" label="机器码" min-width="180" show-overflow-tooltip />
@@ -52,26 +52,26 @@
         <el-table-column label="CPU使用率" width="100" align="center">
           <template #default="{ row }">
             <span v-if="row.cpu_usage != null">{{ row.cpu_usage.toFixed(1) }}%</span>
-            <span v-else style="color: #ccc">-</span>
+            <span v-else class="oc-text-placeholder">-</span>
           </template>
         </el-table-column>
         <el-table-column label="内存使用率" width="110" align="center">
           <template #default="{ row }">
             <span v-if="row.memory_usage != null">{{ row.memory_usage.toFixed(1) }}%</span>
-            <span v-else style="color: #ccc">-</span>
+            <span v-else class="oc-text-placeholder">-</span>
           </template>
         </el-table-column>
         <el-table-column label="磁盘使用率" width="110" align="center">
           <template #default="{ row }">
             <span v-if="row.disk_usage != null">{{ row.disk_usage.toFixed(1) }}%</span>
-            <span v-else style="color: #ccc">-</span>
+            <span v-else class="oc-text-placeholder">-</span>
           </template>
         </el-table-column>
         <el-table-column prop="user_id" label="用户ID" width="80" align="center" />
         <el-table-column prop="skills_count" label="已安装技能" width="100" align="center">
           <template #default="{ row }">
             <el-tag v-if="row.skills_count" type="primary" size="small">{{ row.skills_count }} 个</el-tag>
-            <span v-else style="color: #ccc">0</span>
+            <span v-else class="oc-text-placeholder">0</span>
           </template>
         </el-table-column>
         <el-table-column prop="status" label="状态" width="100" align="center">
@@ -84,14 +84,24 @@
             {{ row.last_heartbeat_at ? formatDateTime(row.last_heartbeat_at) : '从未上线' }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="100" align="center" fixed="right">
+        <el-table-column label="操作" width="200" align="center" fixed="right">
           <template #default="{ row }">
             <el-button link type="primary" size="small" @click="goDetail(row.id)">查看</el-button>
+            <el-dropdown v-if="row.access_links && row.access_links.length > 0" trigger="click" @command="openAccessLink">
+              <el-button link type="success" size="small" style="margin-left: 8px">访问<el-icon v-if="row.access_links.length > 1" class="el-icon--right"><ArrowDown /></el-icon></el-button>
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <el-dropdown-item v-for="link in row.access_links" :key="link.url" :command="link.url">{{ link.label }}</el-dropdown-item>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
+            <el-button v-else link type="info" size="small" style="margin-left: 8px" disabled>访问</el-button>
+            <el-button link type="danger" size="small" style="margin-left: 8px" @click="handleDelete(row)">删除</el-button>
           </template>
         </el-table-column>
       </el-table>
 
-      <div class="pagination-wrapper">
+      <div class="oc-pagination">
         <el-pagination
           v-model:current-page="pagination.page"
           v-model:page-size="pagination.size"
@@ -169,20 +179,24 @@
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
-import { Search, Refresh, Plus } from '@element-plus/icons-vue'
-import { getMachines, createMachine, uploadAgent, getAgentVersion } from '../../api/machine'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { Search, Refresh, Plus, ArrowDown } from '@element-plus/icons-vue'
+import { getMachines, createMachine, deleteMachine, uploadAgent, getAgentVersion } from '../../api/machine'
 
 const router = useRouter()
 
 // ---------- Agent 下载提示 ----------
-const centerHost = computed(() => {
-  const base = import.meta.env.VITE_API_URL || window.location.hostname
-  return base.replace(/^https?:\/\//, '')
+const centerUrl = computed(() => {
+  // Use current page origin as base (handles any host/port)
+  const loc = window.location
+  const host = loc.hostname
+  // Vite dev server proxies /api to backend, so use backend port 8000 in dev
+  const port = import.meta.env.DEV ? '8000' : loc.port
+  return port ? `${host}:${port}` : host
 })
 
 function copyAgentCmd() {
-  const cmd = `Invoke-WebRequest -Uri "http://${centerHost.value}:8000/api/agent/download" -OutFile "OpenClawCenterAgent.exe"; .\\OpenClawCenterAgent.exe`
+  const cmd = `Invoke-WebRequest -Uri "http://${centerUrl.value}/api/agent/download" -OutFile "OpenClawCenterAgent.exe"; .\\OpenClawCenterAgent.exe`
   navigator.clipboard.writeText(cmd).then(() => {
     ElMessage.success('已复制到剪贴板')
   }).catch(() => {
@@ -382,6 +396,31 @@ function goDetail(id) {
   router.push(`/machines/${id}`)
 }
 
+// ---------- 删除 ----------
+async function handleDelete(row) {
+  try {
+    await ElMessageBox.confirm(`确定要删除机器「${row.hostname || row.code}」吗？此操作不可恢复。`, '删除确认', {
+      confirmButtonText: '删除',
+      cancelButtonText: '取消',
+      type: 'warning',
+    })
+  } catch {
+    return
+  }
+  try {
+    await deleteMachine(row.id)
+    ElMessage.success('机器已删除')
+    fetchData()
+  } catch {
+    // handled by interceptor
+  }
+}
+
+// ---------- 远程访问链接 ----------
+function openAccessLink(url) {
+  window.open(url, '_blank')
+}
+
 // ---------- 初始化 ----------
 onMounted(() => {
   fetchData()
@@ -390,9 +429,6 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.machine-list {
-  padding: 16px;
-}
 .agent-download-alert {
   margin-bottom: 16px;
 }
@@ -411,24 +447,10 @@ onMounted(() => {
   margin-top: 8px;
 }
 .agent-download-cmd code {
-  background: #f5f7fa;
+  background: var(--oc-bg-input);
   padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 13px;
+  border-radius: var(--oc-radius-base);
+  font-size: var(--oc-font-base);
   word-break: break-all;
-}
-.filter-card {
-  margin-bottom: 16px;
-}
-.filter-card :deep(.el-form-item) {
-  margin-bottom: 12px;
-}
-.table-card {
-  margin-bottom: 16px;
-}
-.pagination-wrapper {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 16px;
 }
 </style>

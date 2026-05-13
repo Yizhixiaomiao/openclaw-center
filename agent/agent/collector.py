@@ -68,6 +68,9 @@ def get_openclaw_config(config):
         "prompt_versions": "{}",
         "config_content": "",
         "config_file_path": "",
+        "user_md_content": "",
+        "identify_md_content": "",
+        "profiles_dir": "",
     }
     config_path = config.openclaw_config_path
     if not config_path or not os.path.exists(config_path):
@@ -92,6 +95,31 @@ def get_openclaw_config(config):
             pass
     except Exception as e:
         logger.warning("Failed to read OpenClaw config: %s", e)
+    return result
+
+
+def get_profiles(config):
+    """Read USER.md and IDENTITY.md from the profiles directory."""
+    result = {
+        "user_md_content": "",
+        "identify_md_content": "",
+        "profiles_dir": "",
+    }
+    profiles_dir = config.openclaw_profiles_dir
+    if not profiles_dir:
+        return result
+    if not os.path.isdir(profiles_dir):
+        logger.debug("Profiles directory does not exist: %s", profiles_dir)
+        return result
+    result["profiles_dir"] = profiles_dir
+    for filename, key in [("USER.md", "user_md_content"), ("IDENTITY.md", "identify_md_content")]:
+        filepath = os.path.join(profiles_dir, filename)
+        if os.path.isfile(filepath):
+            try:
+                with open(filepath, "r", encoding="utf-8") as f:
+                    result[key] = f.read()
+            except Exception as e:
+                logger.warning("Failed to read %s: %s", filename, e)
     return result
 
 
@@ -240,6 +268,7 @@ def report_config(config):
     url = f"{config.center_url}/api/agent/config/report"
     oc_config = get_openclaw_config(config)
     skills = get_installed_skills(config)
+    profiles = get_profiles(config)
     # Send only lightweight metadata in config report
     meta_skills = [{"code": s["code"], "version": s.get("version", "")} for s in skills]
     payload = {
@@ -250,6 +279,9 @@ def report_config(config):
         "skills": json.dumps(meta_skills),
         "config_content": oc_config["config_content"],
         "config_file_path": oc_config["config_file_path"],
+        "user_md_content": profiles["user_md_content"],
+        "identify_md_content": profiles["identify_md_content"],
+        "profiles_dir": profiles["profiles_dir"],
     }
     try:
         resp = requests.post(url, json=payload, timeout=15)

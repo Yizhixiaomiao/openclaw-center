@@ -8,7 +8,7 @@ from app.schemas.user import ScenarioCreate, ScenarioUpdate, ScenarioResponse
 router = APIRouter()
 
 
-@router.get("", response_model=List[ScenarioResponse])
+@router.get("")
 def list_scenarios(
     user_id: int = None,
     status: str = None,
@@ -25,7 +25,9 @@ def list_scenarios(
         q = q.filter(BusinessScenario.status == status)
     if scenario_type:
         q = q.filter(BusinessScenario.scenario_type == scenario_type)
-    return q.offset(skip).limit(limit).all()
+    total = q.count()
+    items = q.offset(skip).limit(limit).all()
+    return {"items": [ScenarioResponse.model_validate(s).model_dump() for s in items], "total": total}
 
 
 @router.post("", response_model=ScenarioResponse, status_code=201)

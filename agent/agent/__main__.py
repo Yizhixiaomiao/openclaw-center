@@ -1,3 +1,4 @@
+import os
 import sys
 import signal
 import threading
@@ -50,6 +51,7 @@ def main():
     logger.info("OpenClaw Center Agent starting...")
     logger.info("Center URL: %s", config.center_url)
     logger.info("Machine code: %s", config.machine_code)
+    logger.info("Agent version: %s", config.agent_version_display)
 
     if not self_check(config):
         logger.error("Self-check failed, exiting")
@@ -59,21 +61,9 @@ def main():
         logger.error("Registration failed, exiting")
         sys.exit(1)
 
-    # Auto-install as scheduled task for auto-start after first registration
-    from agent.service import is_task_installed, install_task, start_task, is_admin
-    if not is_task_installed():
-        if is_admin():
-            try:
-                install_task()
-                start_task()
-                logger.info("Agent registered as scheduled task (auto-start on boot). Task started.")
-                print("Agent 已注册为计划任务（开机自启）并启动，本窗口将自动关闭。")
-                return
-            except Exception as e:
-                logger.warning("Failed to install scheduled task: %s (will run in console mode)", e)
-        else:
-            logger.warning("Not running as admin - cannot install scheduled task. Run as administrator to enable auto-start.")
-            print("提示：以管理员身份运行可自动注册为计划任务，实现开机自启。")
+    # Ensure scheduled task is registered (for auto-start on boot/login)
+    from agent.service import ensure_scheduled_task
+    ensure_scheduled_task()
 
     # Start background threads
     threads = [
@@ -88,9 +78,9 @@ def main():
         t.start()
         logger.info("Started thread: %s", t.name)
 
-    logger.info("Agent is running. Press Ctrl+C to stop.")
+    logger.info("Agent is running.")
 
-    # Wait for stop signal
+    # Block forever until stop signal
     stop_event.wait()
     logger.info("Agent stopped.")
 
@@ -99,7 +89,7 @@ if __name__ == "__main__":
     try:
         main()
     except Exception as e:
-        import traceback, os
+        import traceback
         print(f"FATAL ERROR: {e}")
         traceback.print_exc(file=sys.stderr)
         try:
@@ -109,5 +99,4 @@ if __name__ == "__main__":
                 traceback.print_exc(file=f)
         except Exception:
             pass
-        input("Press Enter to exit...")
         sys.exit(1)

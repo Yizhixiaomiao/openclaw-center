@@ -12,7 +12,7 @@ from app.utils.security import hash_password
 router = APIRouter()
 
 
-@router.get("", response_model=List[UserResponse])
+@router.get("")
 def list_users(
     department: Optional[str] = None,
     position: Optional[str] = None,
@@ -35,7 +35,9 @@ def list_users(
         q = q.filter(User.status == status)
     if keyword:
         q = q.filter((User.name.contains(keyword)) | (User.username.contains(keyword)))
-    return q.offset(skip).limit(limit).all()
+    total = q.count()
+    items = q.offset(skip).limit(limit).all()
+    return {"items": [UserResponse.model_validate(u).model_dump() for u in items], "total": total}
 
 
 @router.post("", response_model=UserResponse, status_code=201)
@@ -77,6 +79,23 @@ def update_user(user_id: int, req: UserUpdate, db: Session = Depends(get_db), cu
     db.commit()
     db.refresh(user)
     return user
+
+
+@router.delete("/{user_id}")
+def delete_user(
+    user_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role("admin")),
+):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    if user.id == current_user.id:
+        raise HTTPException(status_code=400, detail="Cannot delete yourself")
+    db.query(UserProfile).filter(UserProfile.user_id == user_id).delete()
+    db.delete(user)
+    db.commit()
+    return {"status": "ok", "message": "用户已删除"}
 
 
 @router.get("/{user_id}/profile", response_model=UserProfileResponse)

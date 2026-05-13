@@ -1,7 +1,7 @@
 <template>
-  <div class="deploy-task-list">
-    <div class="page-header">
-      <h2>部署任务</h2>
+  <div class="oc-page">
+    <div class="oc-page-header">
+      <h1 class="oc-page-header__title">部署任务</h1>
     </div>
 
     <el-tabs v-model="activeTab" type="border-card">
@@ -60,16 +60,19 @@
               {{ formatTime(row.created_at) }}
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="100" align="center">
+          <el-table-column label="操作" width="140" align="center">
             <template #default="{ row }">
               <el-button type="primary" link size="small" @click="showTaskDetail(row)">
                 查看
+              </el-button>
+              <el-button type="danger" link size="small" style="margin-left: 8px" @click="handleDeleteTask(row)">
+                删除
               </el-button>
             </template>
           </el-table-column>
         </el-table>
 
-        <div class="pagination-wrapper">
+        <div class="oc-pagination">
           <el-pagination
             v-model:current-page="pagination.page"
             v-model:page-size="pagination.size"
@@ -193,11 +196,12 @@
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   getDeployTasks,
   createDeployTask,
   getDeployTask,
+  deleteDeployTask,
 } from '../../api/deploy'
 import { getMachines } from '../../api/machine'
 
@@ -349,6 +353,25 @@ async function showTaskDetail(row) {
   }
 }
 
+async function handleDeleteTask(row) {
+  try {
+    await ElMessageBox.confirm(`确定要删除部署任务 #${row.id} 吗？此操作不可恢复。`, '删除确认', {
+      confirmButtonText: '删除',
+      cancelButtonText: '取消',
+      type: 'warning',
+    })
+  } catch {
+    return
+  }
+  try {
+    await deleteDeployTask(row.id)
+    ElMessage.success('部署任务已删除')
+    loadTasks()
+  } catch {
+    // handled by interceptor
+  }
+}
+
 async function handleCreate() {
   const form = createFormRef.value
   if (!form) return
@@ -401,28 +424,8 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.deploy-task-list {
-  padding: 0;
-}
-
-.page-header {
-  margin-bottom: 16px;
-}
-
-.page-header h2 {
-  margin: 0;
-  font-size: 20px;
-  font-weight: 600;
-}
-
 .filter-form {
   margin-bottom: 16px;
-}
-
-.pagination-wrapper {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 16px;
 }
 
 .detail-descriptions {

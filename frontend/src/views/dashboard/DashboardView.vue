@@ -1,67 +1,44 @@
 <template>
-  <div class="dashboard-container">
-    <el-row :gutter="20" class="stat-row">
+  <div class="oc-page">
+    <div class="oc-page-header">
+      <div>
+        <h1 class="oc-page-header__title">仪表盘</h1>
+        <div class="oc-page-header__subtitle">系统概览与最近告警</div>
+      </div>
+    </div>
+
+    <el-row :gutter="16" class="stat-row">
       <el-col :span="6">
-        <el-card shadow="hover" class="stat-card stat-card--blue">
-          <div class="stat-card__content">
-            <div class="stat-card__icon stat-card__icon--blue">
-              <el-icon :size="32"><Monitor /></el-icon>
-            </div>
-            <div class="stat-card__info">
-              <div class="stat-card__number">{{ overview.total_machines ?? 0 }}</div>
-              <div class="stat-card__label">机器总数</div>
-            </div>
-          </div>
+        <el-card shadow="never">
+          <div class="oc-metric-value">{{ overview.total_machines ?? 0 }}</div>
+          <div class="oc-metric-label">机器总数</div>
         </el-card>
       </el-col>
       <el-col :span="6">
-        <el-card shadow="hover" class="stat-card stat-card--green">
-          <div class="stat-card__content">
-            <div class="stat-card__icon stat-card__icon--green">
-              <el-icon :size="32"><CircleCheck /></el-icon>
-            </div>
-            <div class="stat-card__info">
-              <div class="stat-card__number">{{ overview.online_machines ?? 0 }}</div>
-              <div class="stat-card__label">在线机器</div>
-            </div>
-          </div>
+        <el-card shadow="never">
+          <div class="oc-metric-value oc-status-ok">{{ overview.online_machines ?? 0 }}</div>
+          <div class="oc-metric-label">在线机器</div>
         </el-card>
       </el-col>
       <el-col :span="6">
-        <el-card shadow="hover" class="stat-card stat-card--orange">
-          <div class="stat-card__content">
-            <div class="stat-card__icon stat-card__icon--orange">
-              <el-icon :size="32"><User /></el-icon>
-            </div>
-            <div class="stat-card__info">
-              <div class="stat-card__number">{{ overview.active_users ?? 0 }}</div>
-              <div class="stat-card__label">活跃用户</div>
-            </div>
-          </div>
+        <el-card shadow="never">
+          <div class="oc-metric-value oc-status-warn">{{ overview.active_users ?? 0 }}</div>
+          <div class="oc-metric-label">活跃用户</div>
         </el-card>
       </el-col>
       <el-col :span="6">
-        <el-card shadow="hover" class="stat-card stat-card--red">
-          <div class="stat-card__content">
-            <div class="stat-card__icon stat-card__icon--red">
-              <el-icon :size="32"><Warning /></el-icon>
-            </div>
-            <div class="stat-card__info">
-              <div class="stat-card__number">{{ overview.warning_plans ?? 0 }}</div>
-              <div class="stat-card__label">告警数量</div>
-            </div>
-          </div>
+        <el-card shadow="never">
+          <div class="oc-metric-value oc-status-error">{{ overview.warning_plans ?? 0 }}</div>
+          <div class="oc-metric-label">告警数量</div>
         </el-card>
       </el-col>
     </el-row>
 
-    <el-card class="alert-card" shadow="never">
+    <el-card shadow="never" class="oc-table-card">
       <template #header>
-        <div class="alert-card__header">
-          <span class="alert-card__title">最近告警</span>
-          <el-button text type="primary" @click="router.push('/monitor')">
-            查看全部
-          </el-button>
+        <div class="card-header">
+          <span>最近告警</span>
+          <span class="oc-action-link" @click="router.push('/monitor')">查看全部</span>
         </div>
       </template>
       <el-table :data="alerts" stripe style="width: 100%;" v-loading="tableLoading">
@@ -90,7 +67,6 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { Monitor, CircleCheck, User, Warning } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { getMonitorOverview, getMonitorAlerts } from '../../api/monitor'
 
@@ -136,71 +112,13 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.dashboard-container {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
 .stat-row {
   margin-bottom: 0;
 }
 
-.stat-card__content {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.stat-card__icon {
-  width: 64px;
-  height: 64px;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #fff;
-  flex-shrink: 0;
-}
-
-.stat-card__icon--blue {
-  background: linear-gradient(135deg, #409EFF, #66b1ff);
-}
-
-.stat-card__icon--green {
-  background: linear-gradient(135deg, #67C23A, #85ce61);
-}
-
-.stat-card__icon--orange {
-  background: linear-gradient(135deg, #E6A23C, #ebb563);
-}
-
-.stat-card__icon--red {
-  background: linear-gradient(135deg, #F56C6C, #f78989);
-}
-
-.stat-card__number {
-  font-size: 28px;
-  font-weight: 700;
-  color: #303133;
-  line-height: 1.2;
-}
-
-.stat-card__label {
-  font-size: 14px;
-  color: #909399;
-  margin-top: 4px;
-}
-
-.alert-card__header {
+.card-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-}
-
-.alert-card__title {
-  font-size: 16px;
-  font-weight: 600;
-  color: #303133;
 }
 </style>

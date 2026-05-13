@@ -1,7 +1,7 @@
 <template>
-  <div class="plan-list">
-    <div class="page-header">
-      <h2>套餐管理</h2>
+  <div class="oc-page">
+    <div class="oc-page-header">
+      <h1 class="oc-page-header__title">套餐管理</h1>
       <el-button type="primary" @click="showAddDialog">
         <el-icon><Plus /></el-icon>
         新增套餐
@@ -53,16 +53,19 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="100" align="center" fixed="right">
+        <el-table-column label="操作" width="140" align="center" fixed="right">
           <template #default="{ row }">
             <el-button type="primary" link size="small" @click="showDetailDialog(row)">
               详情
+            </el-button>
+            <el-button type="danger" link size="small" style="margin-left: 8px" @click="handleDeletePlan(row)">
+              删除
             </el-button>
           </template>
         </el-table-column>
       </el-table>
 
-      <div class="pagination-wrapper">
+      <div class="oc-pagination">
         <el-pagination
           v-model:current-page="pagination.page"
           v-model:page-size="pagination.size"
@@ -267,7 +270,7 @@
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import {
   getPlans,
@@ -275,6 +278,7 @@ import {
   getPlanBindings,
   createPlanBinding,
   getPlanCostStats,
+  deletePlan,
 } from '../../api/plan'
 
 const loading = ref(false)
@@ -343,15 +347,15 @@ function getUsageColor(row) {
   if (pct >= 100) return '#F56C6C'
   const threshold = row.warning_threshold ?? 80
   if (pct >= threshold) return '#E6A23C'
-  return '#409EFF'
+  return '#dc3545'
 }
 
 function getCostStatsColor(stats) {
-  if (!stats) return '#409EFF'
+  if (!stats) return '#dc3545'
   const pct = stats.usage_percentage ?? 0
   if (pct >= 100) return '#F56C6C'
   if (stats.is_warning) return '#E6A23C'
-  return '#409EFF'
+  return '#dc3545'
 }
 
 async function loadPlans() {
@@ -368,6 +372,25 @@ async function loadPlans() {
     // error handled by interceptor
   } finally {
     loading.value = false
+  }
+}
+
+async function handleDeletePlan(row) {
+  try {
+    await ElMessageBox.confirm(`确定要删除套餐「${row.plan_name}」吗？将同时删除关联的绑定和用量记录。`, '删除确认', {
+      confirmButtonText: '删除',
+      cancelButtonText: '取消',
+      type: 'warning',
+    })
+  } catch {
+    return
+  }
+  try {
+    await deletePlan(row.id)
+    ElMessage.success('套餐已删除')
+    loadPlans()
+  } catch {
+    // handled by interceptor
   }
 }
 
@@ -482,26 +505,4 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.plan-list {
-  padding: 0;
-}
-
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-}
-
-.page-header h2 {
-  margin: 0;
-  font-size: 20px;
-  font-weight: 600;
-}
-
-.pagination-wrapper {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 16px;
-}
 </style>

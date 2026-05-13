@@ -25,3 +25,12 @@ PyInstaller.__main__.run([
     f"--workpath={os.path.join(script_dir, 'build')}",
     f"--specpath={script_dir}",
 ])
+
+# Copy version.txt next to the built exe
+dist_dir = os.path.join(script_dir, "dist")
+version_src = os.path.join(script_dir, "version.txt")
+version_dst = os.path.join(dist_dir, "version.txt")
+if os.path.isfile(version_src):
+    import shutil
+    shutil.copy2(version_src, version_dst)
+    print(f"Copied version.txt to {version_dst}")

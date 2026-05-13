@@ -19,3 +19,7 @@ export function distributeSkill(skillCode, machineIds, installPath) {
     install_path: installPath,
   })
 }
+
+export function deleteDeployTask(id) {
+  return request.delete(`/deploy-tasks/${id}`)
+}

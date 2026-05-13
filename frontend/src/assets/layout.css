@@ -1,0 +1,76 @@
+/* ============ Sidebar ============ */
+.app-sidebar {
+  background: var(--oc-bg-sidebar) !important;
+  border-right: 1px solid var(--oc-border-color);
+  overflow: hidden;
+}
+
+.app-sidebar .sidebar-logo {
+  height: var(--oc-topbar-height);
+  background: var(--oc-bg-white);
+  border-bottom: 1px solid var(--oc-border-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 0 20px;
+}
+
+.app-sidebar .sidebar-logo-icon {
+  width: 28px;
+  height: 28px;
+  color: var(--oc-color-primary);
+  flex-shrink: 0;
+}
+
+.app-sidebar .sidebar-logo h1 {
+  color: var(--oc-color-primary);
+  font-size: 20px;
+  font-weight: 700;
+  margin: 0;
+  white-space: nowrap;
+  letter-spacing: 0.5px;
+}
+
+/* Sidebar menu active item: red left border + pink bg */
+.app-sidebar .el-menu-item.is-active {
+  background-color: var(--oc-color-primary-light-9) !important;
+  color: var(--oc-color-primary) !important;
+  border-left: 3px solid var(--oc-color-primary);
+  padding-left: 17px;
+}
+
+.app-sidebar .el-menu-item:hover {
+  background-color: var(--oc-bg-hover) !important;
+  color: var(--oc-color-primary) !important;
+}
+
+.app-sidebar .el-menu {
+  border-right: none;
+}
+
+/* ============ Topbar ============ */
+.app-topbar {
+  height: var(--oc-topbar-height) !important;
+  background: var(--oc-bg-white) !important;
+  border-bottom: 1px solid var(--oc-border-color) !important;
+  padding: 0 var(--oc-space-6) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+}
+
+.app-topbar .el-breadcrumb {
+  font-size: var(--oc-font-sm);
+}
+
+.app-topbar .el-breadcrumb__item:last-child .el-breadcrumb__inner {
+  color: var(--oc-color-primary) !important;
+  font-weight: 600;
+}
+
+/* ============ Main Content ============ */
+.app-main-content {
+  background: var(--oc-bg-page) !important;
+  padding: var(--oc-space-6) !important;
+}

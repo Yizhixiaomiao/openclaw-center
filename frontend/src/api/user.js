@@ -27,3 +27,7 @@ export function updateUserProfile(id, data) {
 export function getUserScenarios(id) {
   return request.get(`/users/${id}/scenarios`)
 }
+
+export function deleteUser(id) {
+  return request.delete(`/users/${id}`)
+}

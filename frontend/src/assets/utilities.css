@@ -1,0 +1,132 @@
+/* ============ Page ============ */
+.oc-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--oc-space-5);
+}
+
+/* ============ Page Header ============ */
+.oc-page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--oc-space-4);
+}
+
+.oc-page-header__title {
+  font-size: var(--oc-font-xl);
+  font-weight: 700;
+  color: var(--oc-color-primary);
+  margin: 0;
+}
+
+.oc-page-header__subtitle {
+  font-size: var(--oc-font-base);
+  color: var(--oc-text-secondary);
+  margin-top: var(--oc-space-1);
+}
+
+/* ============ Filter Card ============ */
+.oc-filter-card {
+  margin-bottom: var(--oc-space-4);
+}
+
+.oc-filter-card :deep(.el-form-item) {
+  margin-bottom: var(--oc-space-3);
+}
+
+/* ============ Table Card ============ */
+.oc-table-card {
+  margin-bottom: var(--oc-space-4);
+}
+
+/* ============ Pagination ============ */
+.oc-pagination {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: var(--oc-space-4);
+}
+
+/* ============ Metric Values ============ */
+.oc-metric-value {
+  font-size: var(--oc-font-2xl);
+  font-weight: 700;
+  color: var(--oc-text-primary);
+  line-height: 1.2;
+}
+
+.oc-metric-label {
+  font-size: var(--oc-font-sm);
+  color: var(--oc-text-secondary);
+  margin-top: var(--oc-space-1);
+}
+
+/* ============ Card Key-Value Row ============ */
+.oc-card-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--oc-space-2) 0;
+  border-bottom: 1px solid var(--oc-border-color-light);
+}
+
+.oc-card-row:last-child {
+  border-bottom: none;
+}
+
+.oc-card-row__key {
+  color: var(--oc-text-secondary);
+  font-size: var(--oc-font-base);
+}
+
+.oc-card-row__value {
+  color: var(--oc-text-primary);
+  font-weight: 500;
+  font-size: var(--oc-font-md);
+}
+
+/* ============ Action Link ============ */
+.oc-action-link {
+  font-size: var(--oc-font-sm);
+  color: var(--oc-color-primary);
+  cursor: pointer;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.oc-action-link:hover {
+  color: var(--oc-color-primary-hover);
+}
+
+.oc-action-link::after {
+  content: ' \2192';
+}
+
+/* ============ Code Block ============ */
+.oc-code-block {
+  background: var(--oc-bg-input);
+  padding: var(--oc-space-3);
+  border-radius: var(--oc-radius-base);
+  font-family: Consolas, Monaco, 'Courier New', monospace;
+  font-size: var(--oc-font-base);
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* ============ Status Colors ============ */
+.oc-status-ok { color: #16a34a; }
+.oc-status-warn { color: #ea580c; }
+.oc-status-error { color: #dc2626; }
+.oc-status-info { color: #6b7280; }
+
+/* ============ Text Utilities ============ */
+.oc-text-primary { color: var(--oc-text-primary); }
+.oc-text-regular { color: var(--oc-text-regular); }
+.oc-text-secondary { color: var(--oc-text-secondary); }
+.oc-text-placeholder { color: var(--oc-text-placeholder); }
+
+/* ============ Section ============ */
+.oc-section + .oc-section {
+  margin-top: var(--oc-space-4);
+}

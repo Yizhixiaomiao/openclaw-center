@@ -31,6 +31,10 @@ Desktop.ini
 agent/dist/
 agent/build/
 agent/*.spec
+agent/config.yaml
+
+# Claude Code
+.claude/
 
 # Uploads
 uploads/

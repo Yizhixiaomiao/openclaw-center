@@ -99,6 +99,9 @@ class AgentConfigReportRequest(BaseModel):
     prompt_versions: Optional[str] = None  # JSON string
     config_content: Optional[str] = None  # Full config file content
     config_file_path: Optional[str] = None  # Full path to config file on agent machine
+    user_md_content: Optional[str] = None  # USER.md file content
+    identify_md_content: Optional[str] = None  # IDENTITY.md file content
+    profiles_dir: Optional[str] = None  # Directory containing USER.md and IDENTITY.md
 
 
 class AgentTaskReportRequest(BaseModel):
@@ -135,3 +138,8 @@ class ConfigUpdateRequest(BaseModel):
 
 class AgentConfigUpdateRequest(BaseModel):
     agent_config_content: str  # Full YAML config content for agent
+
+
+class ProfilesUpdateRequest(BaseModel):
+    user_md_content: Optional[str] = None
+    identify_md_content: Optional[str] = None

@@ -103,12 +103,12 @@ async function handleLogin() {
   align-items: center;
   justify-content: center;
   min-height: 100vh;
-  background: linear-gradient(135deg, #2b5876 0%, #4e4376 100%);
+  background: linear-gradient(135deg, #dc3545 0%, #a71d2a 100%);
 }
 
 .login-card {
   width: 420px;
-  border-radius: 8px;
+  border-radius: 16px;
   padding: 20px 30px 10px;
 }
 
@@ -120,13 +120,13 @@ async function handleLogin() {
 .login-title {
   font-size: 26px;
   font-weight: 700;
-  color: #303133;
+  color: #111827;
   margin: 0 0 8px;
 }
 
 .login-subtitle {
   font-size: 14px;
-  color: #909399;
+  color: #6b7280;
   margin: 0;
 }
 </style>

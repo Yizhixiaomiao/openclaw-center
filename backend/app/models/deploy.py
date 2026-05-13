@@ -7,7 +7,7 @@ class DeployTask(Base):
     __tablename__ = "deploy_tasks"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    task_type = Column(Enum("prompt", "skill", "config", "model_config"), nullable=False)
+    task_type = Column(Enum("prompt", "skill", "skill_remove", "config", "model_config"), nullable=False)
     target_type = Column(Enum("machine", "user", "department", "position"), nullable=False)
     target_id = Column(String(128))
     payload_json = Column(Text)

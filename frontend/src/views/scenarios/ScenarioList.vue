@@ -1,7 +1,7 @@
 <template>
-  <div class="scenario-list">
+  <div class="oc-page">
     <!-- 搜索筛选区 -->
-    <el-card class="filter-card" shadow="never">
+    <el-card class="oc-filter-card" shadow="never">
       <el-form :model="filters" inline>
         <el-form-item label="用户ID">
           <el-input v-model="filters.user_id" placeholder="用户ID" clearable style="width: 120px" @keyup.enter="handleSearch" />
@@ -21,11 +21,11 @@
           <el-button :icon="Refresh" @click="handleReset">重置</el-button>
         </el-form-item>
       </el-form>
-      <el-button type="success" :icon="Plus" @click="openDialog('create')">新增场景</el-button>
+      <el-button type="primary" :icon="Plus" @click="openDialog('create')">新增场景</el-button>
     </el-card>
 
     <!-- 数据表格 -->
-    <el-card shadow="never" class="table-card">
+    <el-card shadow="never" class="oc-table-card">
       <el-table v-loading="loading" :data="tableData" border stripe style="width: 100%">
         <el-table-column prop="id" label="ID" width="70" align="center" />
         <el-table-column prop="name" label="场景名称" min-width="160" show-overflow-tooltip />
@@ -54,7 +54,7 @@
         </el-table-column>
       </el-table>
 
-      <div class="pagination-wrapper">
+      <div class="oc-pagination">
         <el-pagination
           v-model:current-page="pagination.page"
           v-model:page-size="pagination.size"
@@ -296,21 +296,4 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.scenario-list {
-  padding: 16px;
-}
-.filter-card {
-  margin-bottom: 16px;
-}
-.filter-card :deep(.el-form-item) {
-  margin-bottom: 12px;
-}
-.table-card {
-  margin-bottom: 16px;
-}
-.pagination-wrapper {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 16px;
-}
 </style>

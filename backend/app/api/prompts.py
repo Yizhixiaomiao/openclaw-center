@@ -16,7 +16,7 @@ from app.schemas.prompt import (
 router = APIRouter()
 
 
-@router.get("/templates", response_model=List[PromptTemplateResponse])
+@router.get("/templates")
 def list_templates(
     type: Optional[str] = None,
     position_type: Optional[str] = None,
@@ -39,7 +39,9 @@ def list_templates(
         q = q.filter(PromptTemplate.status == status)
     if keyword:
         q = q.filter(PromptTemplate.name.contains(keyword))
-    return q.order_by(PromptTemplate.updated_at.desc()).offset(skip).limit(limit).all()
+    total = q.count()
+    items = q.order_by(PromptTemplate.updated_at.desc()).offset(skip).limit(limit).all()
+    return {"items": [PromptTemplateResponse.model_validate(t).model_dump() for t in items], "total": total}
 
 
 @router.post("/templates", response_model=PromptTemplateResponse, status_code=201)
@@ -90,6 +92,22 @@ def update_template(
     db.commit()
     db.refresh(template)
     return template
+
+
+@router.delete("/templates/{template_id}")
+def delete_template(
+    template_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role("admin")),
+):
+    template = (
+        db.query(PromptTemplate).filter(PromptTemplate.id == template_id).first()
+    )
+    if not template:
+        raise HTTPException(status_code=404, detail="Template not found")
+    db.delete(template)
+    db.commit()
+    return {"status": "ok", "message": "模板已删除"}
 
 
 @router.post("/templates/{template_id}/publish", response_model=PromptTemplateResponse)

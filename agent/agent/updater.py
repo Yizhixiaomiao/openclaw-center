@@ -9,9 +9,13 @@ logger = setup_logger("updater")
 
 
 def handle_upgrade(config, upgrade_info):
-    """Handle upgrade command: download new exe, replace current, restart."""
+    """Download new version, replace current exe, restart via scheduled task."""
     new_version = upgrade_info.get("version", "")
     if not new_version:
+        return
+
+    if AGENT_VERSION == new_version:
+        logger.info("Already at version %s, skipping upgrade", new_version)
         return
 
     logger.info("Upgrade available: %s -> %s", AGENT_VERSION, new_version)
@@ -35,9 +39,9 @@ def handle_upgrade(config, upgrade_info):
         return
 
     current_exe = sys.executable
+    current_dir = os.path.dirname(current_exe)
     bat_script = os.path.join(temp_dir, "_upgrade.bat")
 
-    # bat script: wait for process exit, replace exe, restart via scheduled task or direct
     with open(bat_script, "w", encoding="gbk") as f:
         f.write(f'''@echo off
 echo Upgrading OpenClawCenterAgent...
@@ -54,12 +58,19 @@ if errorlevel 1 (
     echo Upgrade failed!
     exit /b 1
 )
-del /f "{new_exe}"
-echo Upgrade successful, restarting...
+del /f "{new_exe}" 2>nul
+echo {new_version}> "{current_dir}\\version.txt"
+echo Re-registering scheduled task...
+schtasks /create /tn OpenClawCenterAgent /tr "{current_exe}" /sc onstart /ru SYSTEM /rl HIGHEST /f >nul 2>&1
+schtasks /create /tn OpenClawCenterAgent_Logon /tr "{current_exe}" /sc onlogon /rl HIGHEST /f >nul 2>&1
+echo Restarting agent...
 timeout /t 1 /nobreak >nul
 schtasks /run /tn OpenClawCenterAgent >nul 2>&1
 if errorlevel 1 (
-    start "" "{current_exe}"
+    schtasks /run /tn OpenClawCenterAgent_Logon >nul 2>&1
+    if errorlevel 1 (
+        start /min "" "{current_exe}"
+    )
 )
 rd /q "{temp_dir}" 2>nul
 ''')

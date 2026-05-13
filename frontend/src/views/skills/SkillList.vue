@@ -1,7 +1,7 @@
 <template>
-  <div class="skill-list">
+  <div class="oc-page">
     <!-- 搜索筛选区 -->
-    <el-card class="filter-card" shadow="never">
+    <el-card class="oc-filter-card" shadow="never">
       <el-form :model="filters" inline>
         <el-form-item label="关键词">
           <el-input v-model="filters.keyword" placeholder="全字段搜索" clearable style="width: 180px" @keyup.enter="handleSearch" />
@@ -19,7 +19,7 @@
     </el-card>
 
     <!-- 数据表格 -->
-    <el-card shadow="never" class="table-card">
+    <el-card shadow="never" class="oc-table-card">
       <el-table v-loading="loading" :data="tableData" border stripe style="width: 100%">
         <el-table-column prop="id" label="ID" width="70" align="center" />
         <el-table-column prop="name" label="名称" min-width="140" show-overflow-tooltip />
@@ -36,13 +36,13 @@
         <el-table-column label="来源IP" min-width="140" show-overflow-tooltip>
           <template #default="{ row }">
             <span v-if="row.machines && row.machines.length > 0">{{ row.machines[0].ip || '-' }}</span>
-            <span v-else style="color: #ccc">-</span>
+            <span v-else class="oc-text-placeholder">-</span>
           </template>
         </el-table-column>
         <el-table-column label="来源主机名" min-width="130" show-overflow-tooltip>
           <template #default="{ row }">
             <span v-if="row.machines && row.machines.length > 0">{{ row.machines[0].hostname || '-' }}</span>
-            <span v-else style="color: #ccc">-</span>
+            <span v-else class="oc-text-placeholder">-</span>
           </template>
         </el-table-column>
         <el-table-column label="操作" width="200" align="center" fixed="right">
@@ -54,7 +54,7 @@
         </el-table-column>
       </el-table>
 
-      <div class="pagination-wrapper">
+      <div class="oc-pagination">
         <el-pagination
           v-model:current-page="pagination.page"
           v-model:page-size="pagination.size"
@@ -102,7 +102,7 @@
       </div>
       <el-form label-width="90px" style="margin-bottom: 12px">
         <el-form-item label="安装路径">
-          <el-input v-model="installPath" placeholder="目标机器上的技能安装路径" />
+          <el-input v-model="installPath" placeholder="留空则自动使用 Agent 配置的技能目录" />
         </el-form-item>
       </el-form>
       <el-form inline style="margin-bottom: 8px">
@@ -135,7 +135,7 @@
           </template>
         </el-table-column>
       </el-table>
-      <div style="margin-top: 8px; color: #909399; font-size: 12px">
+      <div class="oc-text-secondary" style="margin-top: 8px; font-size: 12px">
         已选择 {{ selectedMachines.length }} 台机器
       </div>
       <template #footer>
@@ -178,8 +178,8 @@ async function fetchData() {
     }
     Object.keys(params).forEach((k) => { if (params[k] === '' || params[k] == null) delete params[k] })
     const res = await getSkills(params)
-    tableData.value = Array.isArray(res) ? res : (res.items || res.data || [])
-    pagination.total = res.total || tableData.value.length
+    tableData.value = res.items || res.data || (Array.isArray(res) ? res : [])
+    pagination.total = res.total || 0
     await enrichSkills()
   } catch {
     // 已由拦截器处理
@@ -313,7 +313,7 @@ const statusLabel = (status) => {
 const distributeVisible = ref(false)
 const distributing = ref(false)
 const distributeSkill = ref(null)
-const installPath = ref('C:\\OpenClaw\\skills')
+const installPath = ref('')
 const allMachines = ref([])
 const selectedMachines = ref([])
 const machineFilter = ref('')
@@ -392,21 +392,4 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.skill-list {
-  padding: 16px;
-}
-.filter-card {
-  margin-bottom: 16px;
-}
-.filter-card :deep(.el-form-item) {
-  margin-bottom: 12px;
-}
-.table-card {
-  margin-bottom: 16px;
-}
-.pagination-wrapper {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 16px;
-}
 </style>

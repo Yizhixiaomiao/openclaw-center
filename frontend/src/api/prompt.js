@@ -28,6 +28,10 @@ export function copyTemplate(id) {
   return request.post(`/prompts/templates/${id}/copy`)
 }
 
+export function deleteTemplate(id) {
+  return request.delete(`/prompts/templates/${id}`)
+}
+
 export function getUserPrompts(params) {
   return request.get('/prompts/user-prompts', { params })
 }

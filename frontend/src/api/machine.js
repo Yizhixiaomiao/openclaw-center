@@ -32,10 +32,22 @@ export function syncMachine(id) {
   return request.post(`/machines/${id}/sync`)
 }
 
+export function updateMachineProfiles(id, data) {
+  return request.put(`/machines/${id}/profiles`, data)
+}
+
 export function uploadAgent(formData) {
   return request.post('/agent/upload', formData)
 }
 
 export function getAgentVersion() {
   return request.get('/agent/version')
+}
+
+export function getMachineAccessLinks(id) {
+  return request.get(`/machines/${id}/access-links`)
+}
+
+export function deleteMachine(id) {
+  return request.delete(`/machines/${id}`)
 }

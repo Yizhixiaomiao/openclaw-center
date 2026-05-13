@@ -1,9 +1,34 @@
 import os
+import sys
 import uuid
 import socket
 import yaml
 
-AGENT_VERSION = "1.0.0"
+_DEFAULT_VERSION = "1.0.0"
+
+
+def _detect_agent_version():
+    """Detect version from version.txt: next to exe, config dir, or fallback."""
+    search_dirs = []
+    if getattr(sys, 'frozen', False):
+        search_dirs.append(os.path.dirname(sys.executable))
+    search_dirs.append(os.path.dirname(os.path.abspath(__file__)))
+    search_dirs.append(r"C:\ProgramData\OpenClawCenterAgent")
+
+    for d in search_dirs:
+        try:
+            vf = os.path.join(d, "version.txt")
+            if os.path.isfile(vf):
+                with open(vf, "r") as f:
+                    v = f.read().strip()
+                    if v:
+                        return v
+        except Exception:
+            pass
+    return _DEFAULT_VERSION
+
+
+AGENT_VERSION = _detect_agent_version()
 
 DEFAULT_CONFIG_PATH = r"C:\ProgramData\OpenClawCenterAgent\config.yaml"
 DEFAULT_LOG_DIR = r"C:\ProgramData\OpenClawCenterAgent\logs"
@@ -44,6 +69,9 @@ openclaw_skills_dir: ''
 
 # OpenClaw prompts directory (optional)
 openclaw_prompts_dir: ''
+
+# OpenClaw profiles directory containing USER.md and IDENTITY.md (optional)
+openclaw_profiles_dir: ''
 
 # Log settings
 log_max_bytes: 10485760
@@ -98,7 +126,7 @@ class AgentConfig:
     def ensure_center_url(self):
         """Prompt for center_url if not configured."""
         url = self._data.get("center_url", "")
-        if not url or url == "http://localhost:8000":
+        if not url:
             print("\n" + "=" * 50)
             print("OpenClaw Center Agent - 首次配置")
             print("=" * 50)
@@ -122,7 +150,11 @@ class AgentConfig:
 
     @property
     def center_url(self):
-        return self._data.get("center_url", "http://localhost:8000")
+        return self._data.get("center_url", "")
+
+    @property
+    def agent_version_display(self):
+        return AGENT_VERSION
 
     @property
     def machine_code(self):
@@ -167,6 +199,10 @@ class AgentConfig:
     @property
     def openclaw_prompts_dir(self):
         return self._data.get("openclaw_prompts_dir", "")
+
+    @property
+    def openclaw_profiles_dir(self):
+        return self._data.get("openclaw_profiles_dir", "")
 
     @property
     def log_max_bytes(self):

@@ -1,7 +1,7 @@
 <template>
-  <div class="template-detail">
-    <div class="page-header">
-      <h2>模板详情</h2>
+  <div class="oc-page">
+    <div class="oc-page-header">
+      <h1 class="oc-page-header__title">模板详情</h1>
       <el-button @click="goBack">
         <el-icon><ArrowLeft /></el-icon>
         返回列表
@@ -10,7 +10,7 @@
 
     <div v-loading="loading">
       <!-- Basic Info -->
-      <el-card shadow="never" class="info-card">
+      <el-card shadow="never" class="oc-table-card">
         <template #header>
           <span>基本信息</span>
         </template>
@@ -36,7 +36,7 @@
       </el-card>
 
       <!-- Prompt Content -->
-      <el-card shadow="never" class="content-card">
+      <el-card shadow="never" class="oc-table-card">
         <template #header>
           <div class="card-header-row">
             <span>Prompt内容</span>
@@ -69,7 +69,7 @@
       </el-card>
 
       <!-- Variables -->
-      <el-card shadow="never" class="variables-card">
+      <el-card shadow="never" class="oc-table-card">
         <template #header>
           <span>变量定义</span>
         </template>
@@ -85,7 +85,7 @@
       </el-card>
 
       <!-- Version Info -->
-      <el-card shadow="never" class="version-card">
+      <el-card shadow="never" class="oc-table-card">
         <template #header>
           <span>版本信息</span>
         </template>
@@ -100,7 +100,7 @@
       </el-card>
 
       <!-- Action Buttons -->
-      <el-card shadow="never" class="actions-card">
+      <el-card shadow="never" class="oc-table-card">
         <template #header>
           <span>操作</span>
         </template>
@@ -299,31 +299,6 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.template-detail {
-  padding: 0;
-}
-
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-}
-
-.page-header h2 {
-  margin: 0;
-  font-size: 20px;
-  font-weight: 600;
-}
-
-.info-card,
-.content-card,
-.variables-card,
-.version-card,
-.actions-card {
-  margin-bottom: 16px;
-}
-
 .card-header-row {
   display: flex;
   justify-content: space-between;
@@ -333,13 +308,13 @@ onMounted(() => {
 .prompt-content {
   white-space: pre-wrap;
   word-break: break-word;
-  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
-  font-size: 13px;
+  font-family: Consolas, Monaco, 'Courier New', monospace;
+  font-size: var(--oc-font-base);
   line-height: 1.6;
   margin: 0;
-  padding: 12px;
-  background-color: #f5f7fa;
-  border-radius: 4px;
+  padding: var(--oc-space-3);
+  background-color: var(--oc-bg-input);
+  border-radius: var(--oc-radius-base);
   max-height: 500px;
   overflow-y: auto;
 }

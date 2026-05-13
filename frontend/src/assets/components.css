@@ -1,0 +1,254 @@
+/* ============ Card ============ */
+.el-card {
+  border: 1px solid var(--oc-border-color);
+  border-radius: var(--oc-radius-lg);
+  box-shadow: none;
+  transition: box-shadow 0.2s ease;
+}
+
+.el-card__header {
+  padding: var(--oc-space-4) var(--oc-space-5);
+  border-bottom: 1px solid var(--oc-border-color-light);
+  font-size: var(--oc-font-md);
+  font-weight: 600;
+  color: var(--oc-text-primary);
+}
+
+.el-card__body {
+  padding: var(--oc-space-5);
+}
+
+/* ============ Table ============ */
+.el-table {
+  --el-table-border-color: #e5e7eb;
+  --el-table-row-hover-bg-color: #f9fafb;
+  --el-table-header-bg-color: #f9fafb;
+  font-size: var(--oc-font-base);
+  border-radius: var(--oc-radius-lg);
+  overflow: hidden;
+}
+
+.el-table th.el-table__cell {
+  background-color: var(--oc-bg-table-header);
+  color: var(--oc-text-secondary);
+  font-weight: 600;
+  font-size: var(--oc-font-base);
+}
+
+.el-table td.el-table__cell {
+  font-size: var(--oc-font-base);
+  color: var(--oc-text-regular);
+}
+
+.el-table--border .el-table__cell {
+  border-color: var(--oc-border-color);
+}
+
+/* ============ Button ============ */
+.el-button--default {
+  background: var(--oc-bg-white);
+  border: 1px solid var(--oc-border-color);
+  border-radius: var(--oc-radius-base);
+  color: var(--oc-text-regular);
+}
+
+.el-button--default:hover {
+  color: var(--oc-color-primary);
+  border-color: var(--oc-color-primary);
+  background-color: var(--oc-color-primary-light-9);
+}
+
+.el-button--primary {
+  border-radius: var(--oc-radius-base);
+}
+
+.el-button--small {
+  border-radius: var(--oc-radius-sm);
+}
+
+/* ============ Tag ============ */
+.el-tag {
+  border-radius: var(--oc-radius-sm);
+  border: none;
+  font-weight: 500;
+  font-size: var(--oc-font-sm);
+}
+
+/* ============ Input ============ */
+.el-input__wrapper {
+  background-color: var(--oc-bg-input);
+  border-radius: var(--oc-radius-base);
+  box-shadow: 0 0 0 1px var(--oc-border-color) inset;
+}
+
+.el-input__wrapper:hover {
+  box-shadow: 0 0 0 1px var(--oc-border-color-hover) inset;
+}
+
+.el-input__wrapper.is-focus {
+  box-shadow: 0 0 0 1px var(--oc-color-primary) inset !important;
+}
+
+/* ============ Select ============ */
+.el-select .el-input__wrapper {
+  border-radius: var(--oc-radius-base);
+}
+
+/* ============ Dialog ============ */
+.el-dialog {
+  border-radius: var(--oc-radius-xl) !important;
+  box-shadow: var(--oc-shadow-dialog) !important;
+  overflow: hidden;
+}
+
+.el-dialog__header {
+  padding: var(--oc-space-5) var(--oc-space-6) var(--oc-space-4);
+  border-bottom: 1px solid var(--oc-border-color-light);
+  margin-right: 0;
+}
+
+.el-dialog__title {
+  font-size: var(--oc-font-lg);
+  font-weight: 700;
+  color: var(--oc-text-primary);
+}
+
+.el-dialog__body {
+  padding: var(--oc-space-5) var(--oc-space-6);
+}
+
+.el-dialog__footer {
+  padding: var(--oc-space-3) var(--oc-space-6) var(--oc-space-5);
+  border-top: 1px solid var(--oc-border-color-light);
+}
+
+/* ============ Pagination ============ */
+.el-pagination.is-background .el-pager li.is-active {
+  background-color: var(--oc-color-primary);
+  border-radius: var(--oc-radius-sm);
+}
+
+.el-pagination .el-pager li {
+  border-radius: var(--oc-radius-sm);
+  font-size: var(--oc-font-base);
+}
+
+.el-pagination .btn-next,
+.el-pagination .btn-prev {
+  border-radius: var(--oc-radius-sm);
+}
+
+/* ============ Descriptions ============ */
+.el-descriptions {
+  border-radius: var(--oc-radius-lg);
+  overflow: hidden;
+}
+
+.el-descriptions .el-descriptions__body {
+  border-radius: var(--oc-radius-lg);
+  overflow: hidden;
+}
+
+.el-descriptions--border .el-descriptions__table {
+  border-radius: var(--oc-radius-lg);
+  overflow: hidden;
+}
+
+.el-descriptions__label {
+  color: var(--oc-text-secondary);
+  font-weight: 500;
+}
+
+.el-descriptions--border {
+  border-radius: var(--oc-radius-lg);
+  overflow: hidden;
+}
+
+/* ============ Tabs ============ */
+.el-tabs__item.is-active {
+  color: var(--oc-color-primary);
+}
+
+.el-tabs__active-bar {
+  background-color: var(--oc-color-primary);
+}
+
+.el-tabs--border-card {
+  border-radius: var(--oc-radius-lg);
+  overflow: hidden;
+  border: 1px solid var(--oc-border-color);
+  box-shadow: none;
+}
+
+.el-tabs--border-card > .el-tabs__header {
+  background-color: var(--oc-bg-table-header);
+  border-bottom: 1px solid var(--oc-border-color);
+}
+
+.el-tabs--border-card > .el-tabs__header .el-tabs__item {
+  border-color: transparent;
+}
+
+.el-tabs--border-card > .el-tabs__header .el-tabs__item.is-active {
+  border-color: var(--oc-border-color) var(--oc-border-color) transparent;
+  color: var(--oc-color-primary);
+}
+
+/* ============ Alert ============ */
+.el-alert {
+  border-radius: var(--oc-radius-base);
+}
+
+/* ============ Progress ============ */
+.el-progress-bar__outer {
+  border-radius: var(--oc-radius-sm);
+}
+
+.el-progress-bar__inner {
+  border-radius: var(--oc-radius-sm);
+}
+
+/* ============ Empty ============ */
+.el-empty {
+  border-radius: var(--oc-radius-lg);
+}
+
+/* ============ Message Box ============ */
+.el-message-box {
+  border-radius: var(--oc-radius-xl);
+}
+
+/* ============ Popover / Dropdown ============ */
+.el-popper {
+  border-radius: var(--oc-radius-lg);
+}
+
+.el-dropdown-menu {
+  border-radius: var(--oc-radius-lg);
+  box-shadow: var(--oc-shadow-dropdown);
+}
+
+/* ============ Scrollbar ============ */
+.el-scrollbar {
+  border-radius: var(--oc-radius-lg);
+}
+
+/* ============ Tree ============ */
+.el-tree {
+  border-radius: var(--oc-radius-base);
+}
+
+/* ============ Upload ============ */
+.el-upload-dragger {
+  border-radius: var(--oc-radius-lg);
+}
+
+/* ============ Date Picker ============ */
+.el-date-editor .el-input__wrapper {
+  border-radius: var(--oc-radius-base);
+}
+
+/* ============ Input Number ============ */
+.el-input-number {
+  border-radius: var(--oc-radius-base);
+}

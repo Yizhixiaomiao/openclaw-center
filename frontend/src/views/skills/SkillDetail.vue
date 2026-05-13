@@ -1,12 +1,14 @@
 <template>
-  <div class="skill-detail" v-loading="loading">
-    <div class="page-header">
-      <el-button :icon="ArrowLeft" @click="goBack">返回</el-button>
-      <span class="page-title">技能详情</span>
+  <div class="oc-page" v-loading="loading">
+    <div class="oc-page-header">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <el-button :icon="ArrowLeft" @click="goBack">返回</el-button>
+        <h1 class="oc-page-header__title">技能详情</h1>
+      </div>
     </div>
 
     <!-- 基本信息 -->
-    <el-card shadow="never" class="info-card">
+    <el-card shadow="never" class="oc-table-card">
       <el-descriptions :column="3" border>
         <el-descriptions-item label="技能ID">{{ skill.id }}</el-descriptions-item>
         <el-descriptions-item label="名称">{{ skill.name }}</el-descriptions-item>
@@ -18,7 +20,7 @@
     </el-card>
 
     <!-- 标签页 -->
-    <el-card shadow="never" class="tabs-card">
+    <el-card shadow="never" class="oc-table-card">
       <el-tabs v-model="activeTab">
         <!-- 已安装机器 -->
         <el-tab-pane label="已安装机器" name="machines">
@@ -171,34 +173,15 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.skill-detail {
-  padding: 16px;
-}
-.page-header {
-  display: flex;
-  align-items: center;
-  margin-bottom: 16px;
-}
-.page-title {
-  font-size: 16px;
-  font-weight: 600;
-  margin-left: 12px;
-}
-.info-card {
-  margin-bottom: 16px;
-}
-.tabs-card {
-  margin-bottom: 16px;
-}
 .file-browser {
   display: flex;
-  border: 1px solid #e4e7ed;
-  border-radius: 4px;
+  border: 1px solid var(--oc-border-color);
+  border-radius: var(--oc-radius-base);
   min-height: 400px;
 }
 .file-tree-panel {
   width: 260px;
-  border-right: 1px solid #e4e7ed;
+  border-right: 1px solid var(--oc-border-color);
   overflow-y: auto;
   padding: 8px;
 }
@@ -210,9 +193,9 @@ onMounted(() => {
 }
 .file-content-header {
   padding: 8px 12px;
-  border-bottom: 1px solid #e4e7ed;
-  font-size: 13px;
-  color: #606266;
+  border-bottom: 1px solid var(--oc-border-color);
+  font-size: var(--oc-font-base);
+  color: var(--oc-text-secondary);
   font-family: monospace;
 }
 .file-content-placeholder {
@@ -220,19 +203,19 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   flex: 1;
-  color: #c0c4cc;
-  font-size: 14px;
+  color: var(--oc-text-placeholder);
+  font-size: var(--oc-font-md);
 }
 .file-tree-node {
   display: flex;
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  font-size: 13px;
+  font-size: var(--oc-font-base);
 }
 .file-size {
-  color: #909399;
-  font-size: 12px;
+  color: var(--oc-text-secondary);
+  font-size: var(--oc-font-sm);
   margin-left: 8px;
 }
 </style>
