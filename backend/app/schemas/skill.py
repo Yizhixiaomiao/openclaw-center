@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, List
 from pydantic import BaseModel
 from datetime import datetime
 
@@ -48,6 +48,8 @@ class SkillResponse(BaseModel):
     entry_command: Optional[str] = None
     install_path: Optional[str] = None
     test_sample: Optional[str] = None
+    source: Optional[str] = "local"
+    clawhub_slug: Optional[str] = None
     audit_status: str
     status: str
     created_at: Optional[datetime] = None
@@ -67,3 +69,9 @@ class MachineSkillResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class ClawHubInstallRequest(BaseModel):
+    slug: str
+    machine_ids: List[int]
+    install_path: Optional[str] = None

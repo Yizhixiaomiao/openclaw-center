@@ -14,6 +14,11 @@
         <el-descriptions-item label="名称">{{ skill.name }}</el-descriptions-item>
         <el-descriptions-item label="编码">{{ skill.code }}</el-descriptions-item>
         <el-descriptions-item label="版本">{{ skill.version || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="来源">
+          <el-tag v-if="skill.source === 'clawhub'" type="warning" size="small">ClawHub</el-tag>
+          <el-tag v-else type="info" size="small">本地</el-tag>
+          <span v-if="skill.clawhub_slug" style="margin-left: 6px; color: var(--el-text-color-secondary);">({{ skill.clawhub_slug }})</span>
+        </el-descriptions-item>
         <el-descriptions-item label="适用岗位">{{ (skill.applicable_positions || []).join('、') || '-' }}</el-descriptions-item>
         <el-descriptions-item label="描述" :span="3">{{ skill.description || '-' }}</el-descriptions-item>
       </el-descriptions>

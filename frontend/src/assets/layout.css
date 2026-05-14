@@ -3,6 +3,26 @@
   background: var(--oc-bg-sidebar) !important;
   border-right: 1px solid var(--oc-border-color);
   overflow: hidden;
+  min-width: 240px;
+  max-width: 480px;
+  resize: horizontal;
+  position: relative;
+}
+
+/* Custom resize handle indicator on the right edge */
+.app-sidebar::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  cursor: col-resize;
+  z-index: 10;
+}
+
+.app-sidebar:hover::after {
+  background: var(--oc-color-primary-light-7);
 }
 
 .app-sidebar .sidebar-logo {
@@ -19,8 +39,8 @@
 .app-sidebar .sidebar-logo-icon {
   width: 28px;
   height: 28px;
-  color: var(--oc-color-primary);
   flex-shrink: 0;
+  object-fit: contain;
 }
 
 .app-sidebar .sidebar-logo h1 {
@@ -69,8 +89,11 @@
   font-weight: 600;
 }
 
-/* ============ Main Content ============ */
+/* ============ Main Content — no outer scrollbar, flex container for child ============ */
 .app-main-content {
   background: var(--oc-bg-page) !important;
-  padding: var(--oc-space-6) !important;
+  overflow: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
+  padding: 0 !important;
 }

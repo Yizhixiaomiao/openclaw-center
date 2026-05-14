@@ -3,8 +3,11 @@ from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from typing import Optional, List
 import os
+import io
 import json
 import re
+import zipfile
+import httpx
 from app.config import settings
 from app.utils.deps import get_db, get_current_user, require_role
 from app.models.user import User
@@ -12,12 +15,174 @@ from app.models.machine import Machine
 from app.models.skill import Skill, MachineSkill
 from app.models.deploy import DeployTask, DeployTaskItem
 from app.models.machine import AgentInfo
-from app.schemas.skill import SkillCreate, SkillUpdate, SkillResponse, MachineSkillResponse
+from app.schemas.skill import SkillCreate, SkillUpdate, SkillResponse, MachineSkillResponse, ClawHubInstallRequest
 
 EXCLUDED_FILES = {"package.zip"}
 DEFAULT_SKILLS_DIR = r"C:\OpenClaw\skills"
 
 router = APIRouter()
+
+
+# ---------- ClawHub proxy helpers ----------
+
+_clawhub_client = httpx.Client(timeout=30.0, headers={"User-Agent": "OpenClawCenter/1.0"})
+
+
+def _clawhub_url(path: str) -> str:
+    return f"{settings.CLAWHUB_API_URL}{path}"
+
+
+# ---------- ClawHub endpoints (must be before /{skill_id} routes) ----------
+
+
+@router.get("/clawhub/search")
+def clawhub_search(
+    q: str = Query(..., min_length=1),
+    limit: int = Query(20, ge=1, le=50),
+    current_user: User = Depends(get_current_user),
+):
+    resp = _clawhub_client.get(_clawhub_url("/api/v1/search"), params={"q": q, "limit": limit})
+    if resp.status_code != 200:
+        raise HTTPException(status_code=502, detail="ClawHub search failed")
+    return resp.json()
+
+
+@router.get("/clawhub/list")
+def clawhub_list(
+    sort: str = Query("trending"),
+    limit: int = Query(20, ge=1, le=50),
+    cursor: Optional[str] = None,
+    current_user: User = Depends(get_current_user),
+):
+    params = {"sort": sort, "limit": limit}
+    if cursor:
+        params["cursor"] = cursor
+    resp = _clawhub_client.get(_clawhub_url("/api/v1/skills"), params=params)
+    if resp.status_code != 200:
+        raise HTTPException(status_code=502, detail="ClawHub list failed")
+    return resp.json()
+
+
+@router.get("/clawhub/{slug}")
+def clawhub_detail(
+    slug: str,
+    current_user: User = Depends(get_current_user),
+):
+    resp = _clawhub_client.get(_clawhub_url(f"/api/v1/skills/{slug}"))
+    if resp.status_code == 404:
+        raise HTTPException(status_code=404, detail="Skill not found on ClawHub")
+    if resp.status_code != 200:
+        raise HTTPException(status_code=502, detail="ClawHub detail failed")
+    return resp.json()
+
+
+@router.post("/clawhub/install")
+def clawhub_install(
+    req: ClawHubInstallRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role("admin", "support", "ops")),
+):
+    # 1. Fetch skill metadata from ClawHub
+    meta_resp = _clawhub_client.get(_clawhub_url(f"/api/v1/skills/{req.slug}"))
+    if meta_resp.status_code == 404:
+        raise HTTPException(status_code=404, detail="Skill not found on ClawHub")
+    if meta_resp.status_code != 200:
+        raise HTTPException(status_code=502, detail="Failed to fetch skill info from ClawHub")
+    meta = meta_resp.json()
+    skill_info = meta.get("skill", {})
+    latest = meta.get("latestVersion", {})
+    display_name = skill_info.get("displayName", req.slug)
+    summary = skill_info.get("summary", "")
+    version = latest.get("version", "")
+
+    # 2. Download skill zip from ClawHub
+    dl_resp = _clawhub_client.get(
+        _clawhub_url("/api/v1/download"),
+        params={"slug": req.slug},
+        follow_redirects=True,
+    )
+    if dl_resp.status_code != 200:
+        raise HTTPException(status_code=502, detail="Failed to download skill from ClawHub")
+
+    # 3. Save zip and extract to uploads/skills/{slug}/
+    skill_dir = os.path.join(settings.UPLOAD_DIR, "skills", req.slug)
+    os.makedirs(skill_dir, exist_ok=True)
+    zip_path = os.path.join(skill_dir, "package.zip")
+    with open(zip_path, "wb") as f:
+        f.write(dl_resp.content)
+    with zipfile.ZipFile(io.BytesIO(dl_resp.content)) as zf:
+        zf.extractall(skill_dir)
+
+    # 4. Create or update Skill record
+    skill = db.query(Skill).filter(Skill.code == req.slug).first()
+    if not skill:
+        skill = Skill(
+            name=display_name,
+            code=req.slug,
+            version=version,
+            description=summary,
+            package_url=f"/api/skills/{req.slug}/download",
+            source="clawhub",
+            clawhub_slug=req.slug,
+            audit_status="approved",
+            status="published",
+        )
+        db.add(skill)
+        db.flush()
+    else:
+        skill.name = display_name
+        if version:
+            skill.version = version
+        if summary:
+            skill.description = summary
+        skill.package_url = f"/api/skills/{req.slug}/download"
+        skill.source = "clawhub"
+        skill.clawhub_slug = req.slug
+        skill.audit_status = "approved"
+        skill.status = "published"
+
+    # 5. Validate machines and create deploy tasks
+    machines = db.query(Machine).filter(Machine.id.in_(req.machine_ids)).all()
+    found_ids = {m.id for m in machines}
+    missing = set(req.machine_ids) - found_ids
+    if missing:
+        raise HTTPException(status_code=400, detail=f"Machine IDs not found: {missing}")
+
+    agent_infos = db.query(AgentInfo).filter(AgentInfo.machine_id.in_(req.machine_ids)).all()
+    agent_map = {ai.machine_id: ai for ai in agent_infos}
+
+    created_tasks = []
+    for mid in req.machine_ids:
+        agent_info = agent_map.get(mid)
+        skills_dir = req.install_path.strip() if req.install_path and req.install_path.strip() else _get_skills_dir(agent_info)
+        payload = json.dumps({
+            "skill_code": req.slug,
+            "package_url": f"/api/skills/{req.slug}/download",
+            "install_path": skills_dir,
+        })
+        task = DeployTask(
+            task_type="skill",
+            target_type="machine",
+            target_id=str(mid),
+            payload_json=payload,
+            status="in_progress",
+            created_by=current_user.id,
+        )
+        db.add(task)
+        db.commit()
+        db.refresh(task)
+
+        item = DeployTaskItem(task_id=task.id, machine_id=mid, status="pending")
+        db.add(item)
+        db.commit()
+        created_tasks.append(task)
+
+    return {
+        "status": "ok",
+        "message": f"Skill '{req.slug}' downloaded from ClawHub, {len(created_tasks)} install task(s) created",
+        "skill_id": skill.id,
+        "tasks_created": len(created_tasks),
+    }
 
 
 def _get_skills_dir(agent_info):

@@ -1,5 +1,8 @@
 <template>
   <div class="oc-page">
+    <el-tabs v-model="activeTab" type="border-card">
+      <!-- Tab 1: 本地技能 -->
+      <el-tab-pane label="本地技能" name="local">
     <!-- 搜索筛选区 -->
     <el-card class="oc-filter-card" shadow="never">
       <el-form :model="filters" inline>
@@ -26,6 +29,12 @@
         <el-table-column prop="code" label="编码" min-width="140" show-overflow-tooltip />
         <el-table-column prop="version" label="版本" width="90" align="center" />
         <el-table-column prop="description" label="描述" min-width="200" show-overflow-tooltip />
+        <el-table-column label="来源" width="100" align="center">
+          <template #default="{ row }">
+            <el-tag v-if="row.source === 'clawhub'" type="warning" size="small">ClawHub</el-tag>
+            <el-tag v-else type="info" size="small">本地</el-tag>
+          </template>
+        </el-table-column>
         <el-table-column label="已安装机器" width="100" align="center">
           <template #default="{ row }">
             <el-link type="primary" :underline="false" @click="showDetail(row.id)" style="cursor: pointer">
@@ -67,6 +76,83 @@
         />
       </div>
     </el-card>
+      </el-tab-pane>
+
+      <!-- Tab 2: ClawHub 市场 -->
+      <el-tab-pane label="ClawHub 市场" name="clawhub">
+        <!-- 搜索和排序 -->
+        <el-card class="oc-filter-card" shadow="never">
+          <el-form :inline="true" @submit.prevent="searchClawHub">
+            <el-form-item label="搜索">
+              <el-input v-model="clawhubQuery" placeholder="搜索技能名称/描述" clearable style="width: 260px" @keyup.enter="searchClawHub" />
+            </el-form-item>
+            <el-form-item label="排序">
+              <el-select v-model="clawhubSort" style="width: 140px" @change="loadClawHubSkills">
+                <el-option label="热门趋势" value="trending" />
+                <el-option label="下载最多" value="downloads" />
+                <el-option label="评分最高" value="stars" />
+                <el-option label="最新发布" value="newest" />
+              </el-select>
+            </el-form-item>
+            <el-form-item>
+              <el-button type="primary" @click="searchClawHub">搜索</el-button>
+              <el-button @click="resetClawHubSearch">重置</el-button>
+            </el-form-item>
+          </el-form>
+        </el-card>
+
+        <!-- ClawHub 技能列表 -->
+        <el-card shadow="never" class="oc-table-card" v-loading="clawhubLoading">
+          <el-table v-if="clawhubSearchMode" :data="clawhubSearchResults" border stripe style="width: 100%">
+            <el-table-column prop="slug" label="Slug" min-width="140" show-overflow-tooltip />
+            <el-table-column prop="displayName" label="名称" min-width="140" show-overflow-tooltip />
+            <el-table-column prop="summary" label="描述" min-width="240" show-overflow-tooltip />
+            <el-table-column label="操作" width="120" align="center">
+              <template #default="{ row }">
+                <el-button link type="primary" size="small" @click="openClawHubInstallDialog(row.slug, row.displayName)">安装</el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+          <el-table v-else :data="clawhubSkills" border stripe style="width: 100%">
+            <el-table-column prop="slug" label="Slug" min-width="140" show-overflow-tooltip />
+            <el-table-column prop="displayName" label="名称" min-width="140" show-overflow-tooltip />
+            <el-table-column prop="summary" label="描述" min-width="240" show-overflow-tooltip />
+            <el-table-column label="版本" width="80" align="center">
+              <template #default="{ row }">
+                {{ row.latestVersion?.version || row.tags?.latest || '-' }}
+              </template>
+            </el-table-column>
+            <el-table-column label="下载" width="90" align="center">
+              <template #default="{ row }">
+                {{ row.stats?.downloads ? (row.stats.downloads >= 1000 ? (row.stats.downloads / 1000).toFixed(1) + 'k' : row.stats.downloads) : '-' }}
+              </template>
+            </el-table-column>
+            <el-table-column label="安装数" width="90" align="center">
+              <template #default="{ row }">
+                {{ row.stats?.installsCurrent ?? '-' }}
+              </template>
+            </el-table-column>
+            <el-table-column label="评分" width="80" align="center">
+              <template #default="{ row }">
+                {{ row.stats?.stars ?? '-' }}
+              </template>
+            </el-table-column>
+            <el-table-column label="操作" width="120" align="center">
+              <template #default="{ row }">
+                <el-button link type="primary" size="small" @click="openClawHubInstallDialog(row.slug, row.displayName)">安装</el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+
+          <div class="oc-pagination" v-if="!clawhubSearchMode && clawhubNextCursor">
+            <el-button type="primary" link @click="loadMoreClawHub">加载更多</el-button>
+          </div>
+          <div class="oc-pagination" v-if="!clawhubSearchMode && !clawhubNextCursor && clawhubSkills.length > 0">
+            <span class="oc-text-secondary">没有更多了</span>
+          </div>
+        </el-card>
+      </el-tab-pane>
+    </el-tabs>
 
     <!-- 新增技能对话框 -->
     <el-dialog v-model="dialogVisible" title="新增技能" width="600px" destroy-on-close @closed="resetForm">
@@ -143,6 +229,55 @@
         <el-button type="primary" :loading="distributing" @click="handleDistribute">确认分发</el-button>
       </template>
     </el-dialog>
+
+    <!-- ClawHub 安装对话框 -->
+    <el-dialog v-model="clawhubInstallVisible" title="从 ClawHub 安装技能" width="720px" destroy-on-close @closed="resetClawHubInstall">
+      <div style="margin-bottom: 16px">
+        <span>技能：<strong>{{ clawhubInstallName }}</strong>（{{ clawhubInstallSlug }}）</span>
+      </div>
+      <el-form label-width="90px" style="margin-bottom: 12px">
+        <el-form-item label="安装路径">
+          <el-input v-model="clawhubInstallPath" placeholder="留空则自动使用 Agent 配置的技能目录" />
+        </el-form-item>
+      </el-form>
+      <el-form inline style="margin-bottom: 8px">
+        <el-form-item label="筛选">
+          <el-input v-model="clawhubMachineFilter" placeholder="机器码/主机名/IP" clearable style="width: 200px" />
+        </el-form-item>
+        <el-form-item label="部门">
+          <el-select v-model="clawhubDeptFilter" placeholder="全部部门" clearable style="width: 160px">
+            <el-option v-for="d in departments" :key="d" :label="d" :value="d" />
+          </el-select>
+        </el-form-item>
+      </el-form>
+      <el-table
+        :data="clawhubFilteredMachines"
+        border
+        height="320"
+        style="width: 100%"
+        @selection-change="onClawHubMachineSelect"
+      >
+        <el-table-column type="selection" width="50" align="center" />
+        <el-table-column prop="code" label="机器码" min-width="140" />
+        <el-table-column prop="hostname" label="主机名" width="140" />
+        <el-table-column prop="ip" label="IP" width="140" />
+        <el-table-column prop="department" label="部门" width="120" />
+        <el-table-column label="状态" width="80" align="center">
+          <template #default="{ row }">
+            <el-tag :type="row.status === 'online' ? 'success' : 'info'" size="small">
+              {{ statusLabel(row.status) }}
+            </el-tag>
+          </template>
+        </el-table-column>
+      </el-table>
+      <div class="oc-text-secondary" style="margin-top: 8px; font-size: 12px">
+        已选择 {{ clawhubSelectedMachines.length }} 台机器
+      </div>
+      <template #footer>
+        <el-button @click="clawhubInstallVisible = false">取消</el-button>
+        <el-button type="primary" :loading="clawhubInstalling" @click="handleClawHubInstall">确认安装</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -151,11 +286,14 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Refresh } from '@element-plus/icons-vue'
-import { getSkills, createSkill, getSkillDetail, deleteSkill } from '../../api/skill'
+import { getSkills, createSkill, getSkillDetail, deleteSkill, searchClawHubSkills, listClawHubSkills, installFromClawHub } from '../../api/skill'
 import { getMachines, getMachineIps } from '../../api/machine'
 import { distributeSkill as distributeSkillApi } from '../../api/deploy'
 
 const router = useRouter()
+
+// ---------- Tabs ----------
+const activeTab = ref('local')
 
 // ---------- 筛选 ----------
 const filters = reactive({
@@ -383,11 +521,139 @@ async function loadMachines() {
   }
 }
 
+// ---------- ClawHub 市场 ----------
+const clawhubQuery = ref('')
+const clawhubSort = ref('trending')
+const clawhubSkills = ref([])
+const clawhubSearchResults = ref([])
+const clawhubSearchMode = ref(false)
+const clawhubNextCursor = ref(null)
+const clawhubLoading = ref(false)
+
+async function loadClawHubSkills() {
+  clawhubSearchMode.value = false
+  clawhubLoading.value = true
+  try {
+    const params = { sort: clawhubSort.value, limit: 20 }
+    const res = await listClawHubSkills(params)
+    clawhubSkills.value = res.items || []
+    clawhubNextCursor.value = res.nextCursor || null
+  } catch {
+    ElMessage.error('加载 ClawHub 技能列表失败')
+  } finally {
+    clawhubLoading.value = false
+  }
+}
+
+async function loadMoreClawHub() {
+  if (!clawhubNextCursor.value) return
+  clawhubLoading.value = true
+  try {
+    const params = { sort: clawhubSort.value, limit: 20, cursor: clawhubNextCursor.value }
+    const res = await listClawHubSkills(params)
+    clawhubSkills.value = [...clawhubSkills.value, ...(res.items || [])]
+    clawhubNextCursor.value = res.nextCursor || null
+  } catch {
+    ElMessage.error('加载更多失败')
+  } finally {
+    clawhubLoading.value = false
+  }
+}
+
+async function searchClawHub() {
+  if (!clawhubQuery.value.trim()) {
+    clawhubSearchMode.value = false
+    return
+  }
+  clawhubLoading.value = true
+  clawhubSearchMode.value = true
+  try {
+    const res = await searchClawHubSkills({ q: clawhubQuery.value.trim(), limit: 20 })
+    clawhubSearchResults.value = res.results || []
+  } catch {
+    ElMessage.error('搜索 ClawHub 失败')
+  } finally {
+    clawhubLoading.value = false
+  }
+}
+
+function resetClawHubSearch() {
+  clawhubQuery.value = ''
+  clawhubSearchMode.value = false
+  clawhubSearchResults.value = []
+}
+
+// ---------- ClawHub 安装对话框 ----------
+const clawhubInstallVisible = ref(false)
+const clawhubInstallSlug = ref('')
+const clawhubInstallName = ref('')
+const clawhubInstallPath = ref('')
+const clawhubMachineFilter = ref('')
+const clawhubDeptFilter = ref('')
+const clawhubSelectedMachines = ref([])
+const clawhubInstalling = ref(false)
+
+const clawhubFilteredMachines = computed(() => {
+  return allMachines.value.filter((m) => {
+    if (clawhubDeptFilter.value && m.department !== clawhubDeptFilter.value) return false
+    if (clawhubMachineFilter.value) {
+      const kw = clawhubMachineFilter.value.toLowerCase()
+      const match = (m.code || '').toLowerCase().includes(kw)
+        || (m.hostname || '').toLowerCase().includes(kw)
+        || (m.ip || '').toLowerCase().includes(kw)
+      if (!match) return false
+    }
+    return true
+  })
+})
+
+function openClawHubInstallDialog(slug, displayName) {
+  clawhubInstallSlug.value = slug
+  clawhubInstallName.value = displayName
+  clawhubInstallVisible.value = true
+}
+
+function resetClawHubInstall() {
+  clawhubInstallSlug.value = ''
+  clawhubInstallName.value = ''
+  clawhubInstallPath.value = ''
+  clawhubMachineFilter.value = ''
+  clawhubDeptFilter.value = ''
+  clawhubSelectedMachines.value = []
+}
+
+function onClawHubMachineSelect(rows) {
+  clawhubSelectedMachines.value = rows
+}
+
+async function handleClawHubInstall() {
+  if (clawhubSelectedMachines.value.length === 0) {
+    ElMessage.warning('请至少选择一台目标机器')
+    return
+  }
+  clawhubInstalling.value = true
+  try {
+    await installFromClawHub({
+      slug: clawhubInstallSlug.value,
+      machine_ids: clawhubSelectedMachines.value.map((m) => m.id),
+      install_path: clawhubInstallPath.value || null,
+    })
+    ElMessage.success(`技能安装任务已创建，共 ${clawhubSelectedMachines.value.length} 台机器`)
+    clawhubInstallVisible.value = false
+    fetchData()
+  } catch {
+    // handled by interceptor
+  } finally {
+    clawhubInstalling.value = false
+  }
+}
+
 // ---------- 初始化 ----------
 onMounted(() => {
   fetchData()
   loadMachines()
   loadMachineIps()
+  loadClawHubSkills()
 })
 </script>
 

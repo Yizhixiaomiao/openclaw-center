@@ -2,8 +2,9 @@ import PyInstaller.__main__
 import os
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
+icon_path = os.path.join(script_dir, "icon.ico")
 
-PyInstaller.__main__.run([
+args = [
     os.path.join(script_dir, "agent", "__main__.py"),
     "--name=OpenClawCenterAgent",
     "--onefile",
@@ -24,7 +25,12 @@ PyInstaller.__main__.run([
     f"--distpath={os.path.join(script_dir, 'dist')}",
     f"--workpath={os.path.join(script_dir, 'build')}",
     f"--specpath={script_dir}",
-])
+]
+
+if os.path.isfile(icon_path):
+    args.append(f"--icon={icon_path}")
+
+PyInstaller.__main__.run(args)
 
 # Copy version.txt next to the built exe
 dist_dir = os.path.join(script_dir, "dist")

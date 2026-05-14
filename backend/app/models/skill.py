@@ -19,6 +19,8 @@ class Skill(Base):
     entry_command = Column(String(256))
     install_path = Column(String(256))
     test_sample = Column(Text)
+    source = Column(String(32), default="local")
+    clawhub_slug = Column(String(128), nullable=True)
     audit_status = Column(Enum("pending", "approved", "rejected"), default="pending")
     status = Column(Enum("draft", "published", "deprecated"), default="draft")
     created_at = Column(DateTime, default=func.now())

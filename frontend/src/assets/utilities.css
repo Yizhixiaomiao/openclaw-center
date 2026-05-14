@@ -3,6 +3,10 @@
   display: flex;
   flex-direction: column;
   gap: var(--oc-space-5);
+  flex: 1;
+  overflow: hidden;
+  min-height: 0;
+  padding: var(--oc-space-6);
 }
 
 /* ============ Page Header ============ */
@@ -26,25 +30,92 @@
   margin-top: var(--oc-space-1);
 }
 
+/* ============ Tabs — make tabs fill remaining space, tab panes become flex containers ============ */
+.el-tabs {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.el-tabs__content {
+  flex: 1;
+  overflow: hidden;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.el-tab-pane {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0;
+}
+
 /* ============ Filter Card ============ */
 .oc-filter-card {
   margin-bottom: var(--oc-space-4);
+  flex-shrink: 0;
 }
 
 .oc-filter-card :deep(.el-form-item) {
   margin-bottom: var(--oc-space-3);
 }
 
-/* ============ Table Card ============ */
+/* ============ Table Card — flex layout: table scrolls internally, pagination pinned to bottom ============ */
 .oc-table-card {
   margin-bottom: var(--oc-space-4);
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0;
 }
 
-/* ============ Pagination ============ */
+/* Card body fills the card, column layout for table + pagination */
+.oc-table-card :deep(.el-card__body) {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0;
+  padding: 16px 20px;
+}
+
+/* Table fills remaining space in card body — height:0 forces flex to control sizing, not default 600px */
+.oc-table-card :deep(.el-table) {
+  flex: 1;
+  min-height: 0;
+  height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* The inner wrapper between el-table and body-wrapper — must be flex to constrain scroll height */
+.oc-table-card :deep(.el-table__inner-wrapper) {
+  flex: 1;
+  min-height: 0;
+  height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* The actual scroll container — constrained by parent flex, scrolls when content overflows */
+.oc-table-card :deep(.el-table__body-wrapper) {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/* ============ Pagination — pinned to bottom of card body ============ */
 .oc-pagination {
   display: flex;
   justify-content: flex-end;
   margin-top: var(--oc-space-4);
+  flex-shrink: 0;
 }
 
 /* ============ Metric Values ============ */

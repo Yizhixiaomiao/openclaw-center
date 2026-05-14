@@ -5,9 +5,27 @@
       <el-breadcrumb-item v-if="currentPageTitle">{{ currentPageTitle }}</el-breadcrumb-item>
     </el-breadcrumb>
     <div style="display: flex; align-items: center; gap: 16px;">
-      <span class="oc-text-secondary">{{ authStore.userName }}</span>
-      <el-tag size="small" type="info">{{ roleLabel }}</el-tag>
-      <el-button type="danger" text @click="handleLogout">退出登录</el-button>
+      <el-dropdown trigger="click" @command="handleCommand">
+        <span style="display: flex; align-items: center; gap: 6px; cursor: pointer; color: var(--oc-text-secondary);">
+          <el-avatar :size="28">{{ (authStore.userName || 'U').charAt(0) }}</el-avatar>
+          <span>{{ authStore.userName }}</span>
+          <el-icon><ArrowDown /></el-icon>
+        </span>
+        <template #dropdown>
+          <el-dropdown-menu>
+            <el-dropdown-item disabled>
+              <span style="font-weight: 600;">{{ authStore.userName }}</span>
+            </el-dropdown-item>
+            <el-dropdown-item disabled>
+              <span style="font-size: 12px; color: var(--el-text-color-secondary);">{{ roleLabel }} · ID: {{ authStore.userId }}</span>
+            </el-dropdown-item>
+            <el-dropdown-item divided command="logout" style="color: var(--el-color-danger);">
+              <el-icon><SwitchButton /></el-icon>
+              退出登录
+            </el-dropdown-item>
+          </el-dropdown-menu>
+        </template>
+      </el-dropdown>
     </div>
   </div>
 </template>
@@ -16,6 +34,8 @@
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../../stores/auth'
+import { ArrowDown, SwitchButton } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
 
 const route = useRoute()
 const router = useRouter()
@@ -49,8 +69,11 @@ const roleLabel = computed(() => {
   return roleMap[authStore.userRole] || authStore.userRole || '未知'
 })
 
-function handleLogout() {
-  authStore.logout()
-  router.push('/login')
+function handleCommand(cmd) {
+  if (cmd === 'logout') {
+    ElMessage.success('已退出登录')
+    authStore.logout()
+    router.push('/login')
+  }
 }
 </script>

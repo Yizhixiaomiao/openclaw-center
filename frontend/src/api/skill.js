@@ -39,3 +39,19 @@ export function getSkillFiles(id) {
 export function getSkillFileContent(id, path) {
   return request.get(`/skills/${id}/files/content`, { params: { path } })
 }
+
+export function searchClawHubSkills(params) {
+  return request.get('/skills/clawhub/search', { params })
+}
+
+export function listClawHubSkills(params) {
+  return request.get('/skills/clawhub/list', { params })
+}
+
+export function getClawHubSkillDetail(slug) {
+  return request.get(`/skills/clawhub/${slug}`)
+}
+
+export function installFromClawHub(data) {
+  return request.post('/skills/clawhub/install', data)
+}
