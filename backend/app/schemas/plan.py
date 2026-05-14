@@ -1,6 +1,21 @@
-from typing import Optional
+from typing import Optional, List
 from pydantic import BaseModel
 from datetime import date, datetime
+
+
+class ApiProbeRequest(BaseModel):
+    api_url: str
+    api_key: str
+    provider: str  # "openai" | "anthropic" | "other"
+
+
+class ApiProbeResponse(BaseModel):
+    success: bool
+    models: List[dict] = []
+    rate_limits: Optional[dict] = None
+    balance_info: Optional[dict] = None
+    error: Optional[str] = None
+    provider_detected: Optional[str] = None
 
 
 class CodingPlanCreate(BaseModel):
@@ -12,6 +27,9 @@ class CodingPlanCreate(BaseModel):
     billing_cycle: Optional[str] = "monthly"
     warning_threshold: Optional[float] = 80.0
     status: Optional[str] = "active"
+    api_url: Optional[str] = None
+    api_key: Optional[str] = None
+    supported_models: Optional[List[str]] = None
 
 
 class CodingPlanUpdate(BaseModel):
@@ -20,9 +38,13 @@ class CodingPlanUpdate(BaseModel):
     monthly_cost: Optional[float] = None
     quota_type: Optional[str] = None
     quota_limit: Optional[int] = None
+    quota_used: Optional[int] = None
     billing_cycle: Optional[str] = None
     warning_threshold: Optional[float] = None
     status: Optional[str] = None
+    api_url: Optional[str] = None
+    api_key: Optional[str] = None
+    supported_models: Optional[List[str]] = None
 
 
 class CodingPlanResponse(BaseModel):
@@ -36,6 +58,11 @@ class CodingPlanResponse(BaseModel):
     billing_cycle: Optional[str] = None
     warning_threshold: Optional[float] = None
     status: str
+    api_url: Optional[str] = None
+    has_api_key: Optional[bool] = False
+    supported_models: Optional[List[str]] = None
+    rate_limits: Optional[dict] = None
+    balance_info: Optional[dict] = None
     created_at: Optional[datetime] = None
 
     class Config:

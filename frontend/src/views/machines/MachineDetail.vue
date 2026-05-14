@@ -11,13 +11,25 @@
     <!-- 基本信息 -->
     <el-card v-loading="loading" shadow="never" class="oc-table-card">
       <template #header>
-        <span>基本信息</span>
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <span>基本信息</span>
+          <div v-if="!isEditingBasic">
+            <el-button type="primary" size="small" @click="startEditBasic">编辑</el-button>
+          </div>
+          <div v-else>
+            <el-button size="small" @click="cancelEditBasic">取消</el-button>
+            <el-button type="primary" size="small" :loading="savingBasic" @click="saveBasicInfo">保存</el-button>
+          </div>
+        </div>
       </template>
-      <el-descriptions :column="3" border>
+      <!-- 查看模式 -->
+      <el-descriptions v-if="!isEditingBasic" :column="3" border>
         <el-descriptions-item label="编号">{{ machine.id }}</el-descriptions-item>
         <el-descriptions-item label="机器码">{{ machine.code }}</el-descriptions-item>
-        <el-descriptions-item label="主机名">{{ machine.hostname }}</el-descriptions-item>
-        <el-descriptions-item label="IP">{{ machine.ip }}</el-descriptions-item>
+        <el-descriptions-item label="主机名">{{ machine.hostname || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="IP">{{ machine.ip || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="MAC">{{ machine.mac || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="部门">{{ machine.department || '-' }}</el-descriptions-item>
         <el-descriptions-item label="系统">{{ machine.os }}</el-descriptions-item>
         <el-descriptions-item label="CPU">{{ machine.cpu }}</el-descriptions-item>
         <el-descriptions-item label="内存">{{ machine.memory }}</el-descriptions-item>
@@ -47,6 +59,73 @@
           </div>
         </el-descriptions-item>
       </el-descriptions>
+      <!-- 编辑模式 -->
+      <el-form v-else ref="basicFormRef" :model="editForm" :rules="basicFormRules" label-width="100px">
+        <el-row :gutter="20">
+          <el-col :span="8">
+            <el-form-item label="编号">
+              <el-input :model-value="String(machine.id)" disabled />
+            </el-form-item>
+          </el-col>
+          <el-col :span="8">
+            <el-form-item label="机器码">
+              <el-input :model-value="machine.code" disabled />
+            </el-form-item>
+          </el-col>
+          <el-col :span="8">
+            <el-form-item label="主机名" prop="hostname">
+              <el-input v-model="editForm.hostname" placeholder="请输入主机名" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="8">
+            <el-form-item label="IP" prop="ip">
+              <el-input v-model="editForm.ip" placeholder="请输入IP地址" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="8">
+            <el-form-item label="MAC" prop="mac">
+              <el-input v-model="editForm.mac" placeholder="请输入MAC地址" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="8">
+            <el-form-item label="部门" prop="department">
+              <el-input v-model="editForm.department" placeholder="请输入部门" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="8">
+            <el-form-item label="系统">
+              <el-input :model-value="machine.os" disabled />
+            </el-form-item>
+          </el-col>
+          <el-col :span="8">
+            <el-form-item label="CPU">
+              <el-input :model-value="machine.cpu" disabled />
+            </el-form-item>
+          </el-col>
+          <el-col :span="8">
+            <el-form-item label="内存">
+              <el-input :model-value="machine.memory" disabled />
+            </el-form-item>
+          </el-col>
+          <el-col :span="8">
+            <el-form-item label="当前用户" prop="current_user">
+              <el-input v-model="editForm.current_user" placeholder="请输入当前用户" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="8">
+            <el-form-item label="状态">
+              <el-tag :type="statusTagType(machine.status)">{{ statusLabel(machine.status) }}</el-tag>
+            </el-form-item>
+          </el-col>
+          <el-col :span="8">
+            <el-form-item label="最近心跳">
+              <span style="color: var(--oc-text-secondary); font-size: 13px">
+                {{ machine.last_heartbeat_at ? formatDateTime(machine.last_heartbeat_at) : '从未上线' }}
+              </span>
+            </el-form-item>
+          </el-col>
+        </el-row>
+      </el-form>
     </el-card>
 
     <!-- 标签页 -->
@@ -256,10 +335,10 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ArrowLeft } from '@element-plus/icons-vue'
-import { getMachine, updateMachineConfig, updateAgentConfig, syncMachine as syncMachineApi, updateMachineProfiles } from '../../api/machine'
+import { getMachine, updateMachine, updateMachineConfig, updateAgentConfig, syncMachine as syncMachineApi, updateMachineProfiles } from '../../api/machine'
 import { getSkillDetail } from '../../api/skill'
 import { ElMessage } from 'element-plus'
 
@@ -271,6 +350,60 @@ const loading = ref(false)
 const machine = ref({})
 const accessLinks = ref([])
 const activeTab = ref('agent')
+
+// ---------- 基本信息编辑 ----------
+const isEditingBasic = ref(false)
+const savingBasic = ref(false)
+const basicFormRef = ref(null)
+const editForm = reactive({
+  hostname: '',
+  ip: '',
+  mac: '',
+  department: '',
+  current_user: '',
+})
+
+const basicFormRules = {
+  hostname: [{ required: true, message: '请输入主机名', trigger: 'blur' }],
+}
+
+function startEditBasic() {
+  editForm.hostname = machine.value.hostname || ''
+  editForm.ip = machine.value.ip || ''
+  editForm.mac = machine.value.mac || ''
+  editForm.department = machine.value.department || ''
+  editForm.current_user = machine.value.current_user || ''
+  isEditingBasic.value = true
+}
+
+function cancelEditBasic() {
+  isEditingBasic.value = false
+}
+
+async function saveBasicInfo() {
+  try {
+    await basicFormRef.value?.validate()
+  } catch {
+    return
+  }
+  savingBasic.value = true
+  try {
+    await updateMachine(machineId, {
+      hostname: editForm.hostname,
+      ip: editForm.ip,
+      mac: editForm.mac,
+      department: editForm.department,
+      current_user: editForm.current_user,
+    })
+    ElMessage.success('基本信息已保存')
+    isEditingBasic.value = false
+    loadData()
+  } catch {
+    // handled by interceptor
+  } finally {
+    savingBasic.value = false
+  }
+}
 
 // ---------- 状态映射 ----------
 const statusTagType = (status) => {

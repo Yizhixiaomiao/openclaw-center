@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, BigInteger, Numeric, Date, DateTime, Enum, ForeignKey, func
+from sqlalchemy import Column, Integer, String, Text, BigInteger, Numeric, Date, DateTime, Enum, ForeignKey, func
 
 from app.database import Base
 
@@ -16,6 +16,11 @@ class CodingPlan(Base):
     billing_cycle = Column(String(32), default="monthly")
     warning_threshold = Column(Numeric(5, 2), default=80.00)
     status = Column(Enum("active", "expired", "disabled"), default="active")
+    api_url = Column(String(512), nullable=True)
+    api_key_encrypted = Column(Text, nullable=True)
+    supported_models = Column(Text, nullable=True)
+    rate_limits = Column(Text, nullable=True)
+    balance_info = Column(Text, nullable=True)
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
 

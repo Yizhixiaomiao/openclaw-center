@@ -1,12 +1,15 @@
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
+from sqlalchemy import func as sa_func
 from typing import Optional, List
 from datetime import datetime, timedelta
 from app.utils.deps import get_db, get_current_user
 from app.models.user import User
 from app.models.machine import Machine
 from app.models.log import AgentLog
-from app.models.plan import CodingPlan
+from app.models.plan import CodingPlan, UsageRecord
+from app.models.skill import MachineSkill, Skill
+from app.models.deploy import DeployTaskItem
 
 router = APIRouter()
 
@@ -78,6 +81,147 @@ def monitor_overview(
     }
 
 
+@router.get("/usage-trend")
+def usage_trend(
+    days: int = Query(7, ge=1, le=90),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Daily API usage trend (calls + tokens) for the last N days."""
+    start_date = datetime.now() - timedelta(days=days)
+    rows = (
+        db.query(
+            sa_func.date(UsageRecord.occurred_at).label("date"),
+            sa_func.sum(UsageRecord.calls).label("total_calls"),
+            sa_func.sum(UsageRecord.tokens).label("total_tokens"),
+        )
+        .filter(UsageRecord.occurred_at >= start_date)
+        .group_by(sa_func.date(UsageRecord.occurred_at))
+        .order_by(sa_func.date(UsageRecord.occurred_at))
+        .all()
+    )
+
+    # Build a date-keyed map, then fill gaps with 0
+    data_map = {}
+    for r in rows:
+        date_str = str(r.date)
+        data_map[date_str] = {
+            "date": date_str,
+            "total_calls": r.total_calls or 0,
+            "total_tokens": r.total_tokens or 0,
+        }
+
+    result = []
+    for i in range(days):
+        d = (datetime.now() - timedelta(days=days - 1 - i)).strftime("%Y-%m-%d")
+        if d in data_map:
+            result.append(data_map[d])
+        else:
+            result.append({"date": d, "total_calls": 0, "total_tokens": 0})
+
+    return result
+
+
+@router.get("/machine-stats")
+def machine_stats(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Machine distribution by status and department."""
+    threshold = datetime.now() - timedelta(minutes=3)
+    machines = db.query(Machine).all()
+
+    # Status distribution — use heartbeat to determine actual online/offline
+    status_map = {"online": 0, "offline": 0, "error": 0, "pending_init": 0, "disabled": 0}
+    dept_map = {}
+
+    for m in machines:
+        # Determine actual online status
+        is_online = m.last_heartbeat_at and m.last_heartbeat_at > threshold
+        if m.status == "error":
+            status_map["error"] += 1
+        elif m.status == "disabled":
+            status_map["disabled"] += 1
+        elif m.status == "pending_init":
+            status_map["pending_init"] += 1
+        elif is_online:
+            status_map["online"] += 1
+        else:
+            status_map["offline"] += 1
+
+        # Department distribution
+        dept = m.department or "未分配"
+        dept_map[dept] = dept_map.get(dept, 0) + 1
+
+    status_distribution = [
+        {"name": "在线", "value": status_map["online"]},
+        {"name": "离线", "value": status_map["offline"]},
+        {"name": "异常", "value": status_map["error"]},
+        {"name": "待初始化", "value": status_map["pending_init"]},
+        {"name": "已禁用", "value": status_map["disabled"]},
+    ]
+    # Filter out zero values
+    status_distribution = [s for s in status_distribution if s["value"] > 0]
+
+    department_distribution = [
+        {"name": k, "value": v} for k, v in sorted(dept_map.items(), key=lambda x: -x[1])
+    ]
+
+    return {
+        "status_distribution": status_distribution,
+        "department_distribution": department_distribution,
+    }
+
+
+@router.get("/skill-ranking")
+def skill_ranking(
+    limit: int = Query(10, ge=1, le=50),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Top N most-installed skills."""
+    rows = (
+        db.query(
+            Skill.name,
+            sa_func.count(MachineSkill.id).label("install_count"),
+        )
+        .join(Skill, MachineSkill.skill_id == Skill.id)
+        .filter(MachineSkill.status != "removed")
+        .group_by(MachineSkill.skill_id)
+        .order_by(sa_func.count(MachineSkill.id).desc())
+        .limit(limit)
+        .all()
+    )
+    return [{"name": r.name or "未知", "install_count": r.install_count} for r in rows]
+
+
+@router.get("/deploy-stats")
+def deploy_stats(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Deploy task item status distribution."""
+    rows = (
+        db.query(
+            DeployTaskItem.status,
+            sa_func.count(DeployTaskItem.id).label("count"),
+        )
+        .group_by(DeployTaskItem.status)
+        .all()
+    )
+    label_map = {
+        "pending": "待执行",
+        "in_progress": "执行中",
+        "completed": "已完成",
+        "failed": "失败",
+        "partial": "部分完成",
+    }
+    result = []
+    for r in rows:
+        result.append({"name": label_map.get(r.status, r.status), "value": r.count})
+    return result
+
+
 @router.get("/logs")
 def monitor_logs(
     machine_id: Optional[int] = None,
@@ -141,7 +285,7 @@ def monitor_alerts(
                 "machine_code": m.code,
                 "hostname": m.hostname,
                 "ip": m.ip,
-                "message": f"Machine {m.hostname or m.code} offline",
+                "message": f"机器 {m.hostname or m.code} 离线",
             }
         )
     # Error machines
@@ -154,7 +298,7 @@ def monitor_alerts(
                 "machine_code": m.code,
                 "hostname": m.hostname,
                 "ip": m.ip,
-                "message": f"Machine {m.hostname or m.code} in error state",
+                "message": f"机器 {m.hostname or m.code} 处于异常状态",
             }
         )
     # Plan warnings
@@ -167,7 +311,7 @@ def monitor_alerts(
                     {
                         "type": "plan_high_risk",
                         "plan_id": p.id,
-                        "message": f"Plan {p.plan_name} quota exceeded ({pct:.1f}%)",
+                        "message": f"套餐 {p.plan_name} 额度已超限 ({pct:.1f}%)",
                     }
                 )
             elif pct >= float(p.warning_threshold):
@@ -175,7 +319,7 @@ def monitor_alerts(
                     {
                         "type": "plan_warning",
                         "plan_id": p.id,
-                        "message": f"Plan {p.plan_name} usage at {pct:.1f}%",
+                        "message": f"套餐 {p.plan_name} 使用率 {pct:.1f}%",
                     }
                 )
     return alerts

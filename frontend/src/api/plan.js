@@ -31,3 +31,7 @@ export function getPlanCostStats(planId) {
 export function deletePlan(id) {
   return request.delete(`/coding-plans/${id}`)
 }
+
+export function probeApi(data) {
+  return request.post('/coding-plans/probe-api', data)
+}
