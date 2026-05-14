@@ -75,9 +75,9 @@ const routes = [
         meta: { roles: ['admin', 'support', 'ops'] },
       },
       {
-        path: 'plans',
-        name: 'Plans',
-        component: () => import('../views/plans/PlanList.vue'),
+        path: 'ai-config',
+        name: 'AIConfig',
+        component: () => import('../views/ai-config/AIConfigList.vue'),
         meta: { roles: ['admin'] },
       },
       {

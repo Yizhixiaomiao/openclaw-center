@@ -84,3 +84,10 @@ class UserPromptResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class AIGenerateRequest(BaseModel):
+    description: str
+    type: Optional[str] = "general"
+    position_type: Optional[str] = None
+    scenario_type: Optional[str] = None

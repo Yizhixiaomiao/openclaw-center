@@ -1,9 +1,14 @@
+import json
+import httpx
 from fastapi import APIRouter, HTTPException, Depends, Query
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from typing import Optional, List
 from app.utils.deps import get_db, get_current_user, require_role
+from app.utils.security import decrypt_value
 from app.models.user import User
 from app.models.prompt import PromptTemplate, UserPrompt
+from app.models.ai_config import AIConfig
 from app.schemas.prompt import (
     PromptTemplateCreate,
     PromptTemplateUpdate,
@@ -11,6 +16,7 @@ from app.schemas.prompt import (
     UserPromptCreate,
     UserPromptUpdate,
     UserPromptResponse,
+    AIGenerateRequest,
 )
 
 router = APIRouter()
@@ -186,6 +192,126 @@ def copy_template(
     db.commit()
     db.refresh(new_template)
     return new_template
+
+
+# ---------- AI Generate ----------
+
+SYSTEM_PROMPT = """你是一位专业的Prompt工程师。用户会描述他们需要什么样的提示词模板，你需要生成高质量、结构化的Prompt模板内容。
+
+要求：
+1. 模板应包含清晰的角色设定、任务描述、输入输出格式要求
+2. 使用 {{变量名}} 标记可替换的变量
+3. 包含异常处理规则和边界情况说明
+4. 如果适用，给出输出格式示例
+5. 内容要完整、可直接使用
+6. 只输出模板内容本身，不要输出额外解释"""
+
+
+@router.post("/ai-generate")
+def ai_generate_prompt(
+    req: AIGenerateRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    cfg = db.query(AIConfig).filter(AIConfig.is_active == True).first()
+    if not cfg:
+        raise HTTPException(status_code=422, detail="请先在AI配置中添加并激活一个AI模型")
+
+    api_key = decrypt_value(cfg.api_key_encrypted) if cfg.api_key_encrypted else ""
+    api_url = cfg.api_url.rstrip("/")
+    model = cfg.model_name or "gpt-3.5-turbo"
+
+    # Build user message with context
+    user_msg = f"请帮我生成一个Prompt模板。\n\n需求描述：{req.description}"
+    if req.type and req.type != "general":
+        type_map = {"position": "岗位专用", "user_specific": "用户专属"}
+        user_msg += f"\n模板类型：{type_map.get(req.type, req.type)}"
+    if req.position_type:
+        user_msg += f"\n适用岗位：{req.position_type}"
+    if req.scenario_type:
+        user_msg += f"\n适用场景：{req.scenario_type}"
+
+    def stream_response():
+        try:
+            if cfg.provider == "anthropic":
+                headers = {
+                    "x-api-key": api_key,
+                    "anthropic-version": "2023-06-01",
+                    "content-type": "application/json",
+                }
+                payload = {
+                    "model": model,
+                    "max_tokens": 4096,
+                    "system": SYSTEM_PROMPT,
+                    "messages": [{"role": "user", "content": user_msg}],
+                    "stream": True,
+                }
+                url = f"{api_url}/messages"
+            else:
+                headers = {
+                    "Authorization": f"Bearer {api_key}",
+                    "content-type": "application/json",
+                }
+                payload = {
+                    "model": model,
+                    "max_tokens": 4096,
+                    "messages": [
+                        {"role": "system", "content": SYSTEM_PROMPT},
+                        {"role": "user", "content": user_msg},
+                    ],
+                    "stream": True,
+                }
+                url = f"{api_url}/chat/completions"
+
+            with httpx.Client(timeout=60.0) as client:
+                with client.stream("POST", url, headers=headers, json=payload) as resp:
+                    resp.raise_for_status()
+                    for line in resp.iter_lines():
+                        if not line:
+                            continue
+                        if cfg.provider == "anthropic":
+                            if line.startswith("data: "):
+                                data_str = line[6:]
+                                if data_str.strip() == "[DONE]":
+                                    break
+                                try:
+                                    data = json.loads(data_str)
+                                    if data.get("type") == "content_block_delta":
+                                        delta = data.get("delta", {}).get("text", "")
+                                        if delta:
+                                            yield f"data: {json.dumps({'content': delta})}\n\n"
+                                except json.JSONDecodeError:
+                                    pass
+                        else:
+                            if line.startswith("data: "):
+                                data_str = line[6:]
+                                if data_str.strip() == "[DONE]":
+                                    break
+                                try:
+                                    data = json.loads(data_str)
+                                    delta = data.get("choices", [{}])[0].get("delta", {})
+                                    content = delta.get("content", "")
+                                    if content:
+                                        yield f"data: {json.dumps({'content': content})}\n\n"
+                                except json.JSONDecodeError:
+                                    pass
+
+            yield "data: [DONE]\n\n"
+
+        except httpx.TimeoutException:
+            yield f"data: {json.dumps({'error': 'AI服务响应超时'})}\n\n"
+        except httpx.HTTPStatusError as e:
+            yield f"data: {json.dumps({'error': f'AI服务返回错误 (HTTP {e.response.status_code})'})}\n\n"
+        except httpx.ConnectError:
+            yield f"data: {json.dumps({'error': '无法连接到AI服务'})}\n\n"
+        except Exception as e:
+            yield f"data: {json.dumps({'error': f'生成失败: {str(e)}'})}\n\n"
+
+    return StreamingResponse(
+        stream_response(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
 
 # User Prompts

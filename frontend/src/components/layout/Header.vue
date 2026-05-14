@@ -52,7 +52,7 @@ const pageTitleMap = {
   TemplateDetail: '模板详情',
   Skills: '技能管理',
   Deploy: '分发任务',
-  Plans: 'Coding Plan',
+  AIConfig: 'AI配置',
   Monitor: '监控日志',
 }
 

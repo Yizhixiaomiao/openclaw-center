@@ -4,6 +4,7 @@ from .prompt import PromptTemplate, UserPrompt
 from .skill import Skill, MachineSkill
 from .deploy import DeployTask, DeployTaskItem
 from .plan import CodingPlan, PlanBinding, UsageRecord
+from .ai_config import AIConfig
 from .log import AgentLog, SupportTicket
 
 __all__ = [
@@ -22,6 +23,7 @@ __all__ = [
     "CodingPlan",
     "PlanBinding",
     "UsageRecord",
+    "AIConfig",
     "AgentLog",
     "SupportTicket",
 ]

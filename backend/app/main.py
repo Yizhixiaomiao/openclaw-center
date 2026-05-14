@@ -5,7 +5,7 @@ import os
 from app.config import settings
 from app.database import engine, Base
 from app.models import *  # noqa: ensure all models registered
-from app.api import auth, users, machines, scenarios, prompts, skills, deploy, plans, monitor, agent
+from app.api import auth, users, machines, scenarios, prompts, skills, deploy, plans, monitor, agent, ai_config
 
 app = FastAPI(title="OpenClaw Center", description="OpenClaw Enterprise Management Platform API", version="1.0.0")
 
@@ -29,6 +29,7 @@ app.include_router(prompts.router, prefix="/api/prompts", tags=["Prompts"])
 app.include_router(skills.router, prefix="/api/skills", tags=["Skills"])
 app.include_router(deploy.router, prefix="/api/deploy-tasks", tags=["Deploy"])
 app.include_router(plans.router, prefix="/api/coding-plans", tags=["Plans"])
+app.include_router(ai_config.router, prefix="/api/ai-configs", tags=["AI Config"])
 app.include_router(monitor.router, prefix="/api/monitor", tags=["Monitor"])
 app.include_router(agent.router, prefix="/api/agent", tags=["Agent"])
 

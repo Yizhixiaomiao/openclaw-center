@@ -37,9 +37,9 @@
           <el-icon><Upload /></el-icon>
           <span>分发任务</span>
         </el-menu-item>
-        <el-menu-item index="/plans">
-          <el-icon><Money /></el-icon>
-          <span>Coding Plan</span>
+        <el-menu-item index="/ai-config">
+          <el-icon><Setting /></el-icon>
+          <span>AI配置</span>
         </el-menu-item>
         <el-menu-item index="/monitor">
           <el-icon><Warning /></el-icon>
@@ -61,7 +61,7 @@ import {
   Document,
   Box,
   Upload,
-  Money,
+  Setting,
   Warning,
 } from '@element-plus/icons-vue'
 
