@@ -1,9 +1,11 @@
 /* ============ Card ============ */
 .el-card {
+  --el-card-border-radius: var(--oc-radius-lg);
   border: 1px solid var(--oc-border-color);
-  border-radius: var(--oc-radius-lg);
+  border-radius: var(--oc-radius-lg) !important;
   box-shadow: none;
   transition: box-shadow 0.2s ease;
+  overflow: hidden;
 }
 
 .el-card__header {
@@ -24,7 +26,7 @@
   --el-table-row-hover-bg-color: #f9fafb;
   --el-table-header-bg-color: #f9fafb;
   font-size: var(--oc-font-base);
-  border-radius: var(--oc-radius-lg);
+  border-radius: var(--oc-radius-lg) !important;
   overflow: hidden;
 }
 
@@ -45,10 +47,16 @@
 }
 
 /* ============ Button ============ */
+.el-button {
+  --el-border-radius-base: var(--oc-radius-base);
+  --el-border-radius-small: var(--oc-radius-sm);
+  border-radius: var(--oc-radius-base) !important;
+}
+
 .el-button--default {
   background: var(--oc-bg-white);
   border: 1px solid var(--oc-border-color);
-  border-radius: var(--oc-radius-base);
+  border-radius: var(--oc-radius-base) !important;
   color: var(--oc-text-regular);
 }
 
@@ -59,16 +67,17 @@
 }
 
 .el-button--primary {
-  border-radius: var(--oc-radius-base);
+  border-radius: var(--oc-radius-base) !important;
 }
 
 .el-button--small {
-  border-radius: var(--oc-radius-sm);
+  border-radius: var(--oc-radius-sm) !important;
 }
 
 /* ============ Tag ============ */
 .el-tag {
-  border-radius: var(--oc-radius-sm);
+  --el-tag-border-radius: var(--oc-radius-sm);
+  border-radius: var(--oc-radius-sm) !important;
   border: none;
   font-weight: 500;
   font-size: var(--oc-font-sm);
@@ -76,8 +85,9 @@
 
 /* ============ Input ============ */
 .el-input__wrapper {
+  --el-input-border-radius: var(--oc-radius-base);
   background-color: var(--oc-bg-input);
-  border-radius: var(--oc-radius-base);
+  border-radius: var(--oc-radius-base) !important;
   box-shadow: 0 0 0 1px var(--oc-border-color) inset;
 }
 
@@ -91,11 +101,12 @@
 
 /* ============ Select ============ */
 .el-select .el-input__wrapper {
-  border-radius: var(--oc-radius-base);
+  border-radius: var(--oc-radius-base) !important;
 }
 
 /* ============ Dialog ============ */
 .el-dialog {
+  --el-dialog-border-radius: var(--oc-radius-xl);
   border-radius: var(--oc-radius-xl) !important;
   box-shadow: var(--oc-shadow-dialog) !important;
   overflow: hidden;
@@ -125,32 +136,32 @@
 /* ============ Pagination ============ */
 .el-pagination.is-background .el-pager li.is-active {
   background-color: var(--oc-color-primary);
-  border-radius: var(--oc-radius-sm);
+  border-radius: var(--oc-radius-sm) !important;
 }
 
 .el-pagination .el-pager li {
-  border-radius: var(--oc-radius-sm);
+  border-radius: var(--oc-radius-sm) !important;
   font-size: var(--oc-font-base);
 }
 
 .el-pagination .btn-next,
 .el-pagination .btn-prev {
-  border-radius: var(--oc-radius-sm);
+  border-radius: var(--oc-radius-sm) !important;
 }
 
 /* ============ Descriptions ============ */
 .el-descriptions {
-  border-radius: var(--oc-radius-lg);
+  border-radius: var(--oc-radius-lg) !important;
   overflow: hidden;
 }
 
 .el-descriptions .el-descriptions__body {
-  border-radius: var(--oc-radius-lg);
+  border-radius: var(--oc-radius-lg) !important;
   overflow: hidden;
 }
 
 .el-descriptions--border .el-descriptions__table {
-  border-radius: var(--oc-radius-lg);
+  border-radius: var(--oc-radius-lg) !important;
   overflow: hidden;
 }
 
@@ -160,7 +171,7 @@
 }
 
 .el-descriptions--border {
-  border-radius: var(--oc-radius-lg);
+  border-radius: var(--oc-radius-lg) !important;
   overflow: hidden;
 }
 
@@ -174,7 +185,7 @@
 }
 
 .el-tabs--border-card {
-  border-radius: var(--oc-radius-lg);
+  border-radius: var(--oc-radius-lg) !important;
   overflow: hidden;
   border: 1px solid var(--oc-border-color);
   box-shadow: none;
@@ -196,59 +207,61 @@
 
 /* ============ Alert ============ */
 .el-alert {
-  border-radius: var(--oc-radius-base);
+  border-radius: var(--oc-radius-base) !important;
 }
 
 /* ============ Progress ============ */
 .el-progress-bar__outer {
-  border-radius: var(--oc-radius-sm);
+  border-radius: var(--oc-radius-sm) !important;
 }
 
 .el-progress-bar__inner {
-  border-radius: var(--oc-radius-sm);
+  border-radius: var(--oc-radius-sm) !important;
 }
 
 /* ============ Empty ============ */
 .el-empty {
-  border-radius: var(--oc-radius-lg);
+  border-radius: var(--oc-radius-lg) !important;
 }
 
 /* ============ Message Box ============ */
 .el-message-box {
-  border-radius: var(--oc-radius-xl);
+  --el-messagebox-border-radius: var(--oc-radius-xl);
+  border-radius: var(--oc-radius-xl) !important;
 }
 
 /* ============ Popover / Dropdown ============ */
 .el-popper {
-  border-radius: var(--oc-radius-lg);
+  --el-popover-border-radius: var(--oc-radius-lg);
+  border-radius: var(--oc-radius-lg) !important;
 }
 
 .el-dropdown-menu {
-  border-radius: var(--oc-radius-lg);
+  border-radius: var(--oc-radius-lg) !important;
   box-shadow: var(--oc-shadow-dropdown);
 }
 
 /* ============ Scrollbar ============ */
 .el-scrollbar {
-  border-radius: var(--oc-radius-lg);
+  border-radius: var(--oc-radius-lg) !important;
 }
 
 /* ============ Tree ============ */
 .el-tree {
-  border-radius: var(--oc-radius-base);
+  border-radius: var(--oc-radius-base) !important;
 }
 
 /* ============ Upload ============ */
 .el-upload-dragger {
-  border-radius: var(--oc-radius-lg);
+  border-radius: var(--oc-radius-lg) !important;
 }
 
 /* ============ Date Picker ============ */
 .el-date-editor .el-input__wrapper {
-  border-radius: var(--oc-radius-base);
+  border-radius: var(--oc-radius-base) !important;
 }
 
 /* ============ Input Number ============ */
 .el-input-number {
-  border-radius: var(--oc-radius-base);
+  border-radius: var(--oc-radius-base) !important;
 }

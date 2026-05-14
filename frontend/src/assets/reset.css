@@ -46,14 +46,14 @@ html, body {
   --el-text-color-placeholder: #9ca3af;
   --el-text-color-disabled: #d1d5db;
 
-  /* Border Radius */
-  --el-border-radius-base: 8px;
-  --el-border-radius-small: 6px;
+  /* Border Radius — unified */
+  --el-border-radius-base: 20px;
+  --el-border-radius-small: 20px;
   --el-border-radius-round: 20px;
 
   /* Card */
   --el-card-border-color: #e5e7eb;
-  --el-card-border-radius: 12px;
+  --el-card-border-radius: 20px;
   --el-card-bg-color: #ffffff;
 
   /* Table */
@@ -72,15 +72,15 @@ html, body {
   --el-input-placeholder-color: #9ca3af;
 
   /* Dialog */
-  --el-dialog-border-radius: 16px;
+  --el-dialog-border-radius: 20px;
   --el-dialog-box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
   --el-dialog-padding-primary: 20px 24px;
 
   /* Message Box */
-  --el-messagebox-border-radius: 16px;
+  --el-messagebox-border-radius: 20px;
 
   /* Popover */
-  --el-popover-border-radius: 12px;
+  --el-popover-border-radius: 20px;
 
   /* Pagination */
   --el-pagination-bg-color: #ffffff;
@@ -88,7 +88,7 @@ html, body {
   --el-pagination-hover-color: #dc3545;
 
   /* Tag */
-  --el-tag-border-radius: 6px;
+  --el-tag-border-radius: 20px;
 
   /* Menu */
   --el-menu-bg-color: #fafafa;

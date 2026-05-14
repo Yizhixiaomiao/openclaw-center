@@ -46,9 +46,12 @@
         <el-table-column prop="code" label="机器码" min-width="180" show-overflow-tooltip />
         <el-table-column prop="hostname" label="主机名" min-width="130" show-overflow-tooltip />
         <el-table-column prop="ip" label="IP" width="140" />
+        <el-table-column prop="department" label="部门" width="120" show-overflow-tooltip>
+          <template #default="{ row }">
+            {{ row.department || '-' }}
+          </template>
+        </el-table-column>
         <el-table-column prop="os" label="系统" width="100" align="center" />
-        <el-table-column prop="cpu" label="CPU" width="80" align="center" />
-        <el-table-column prop="memory" label="内存" width="80" align="center" />
         <el-table-column label="CPU使用率" width="100" align="center">
           <template #default="{ row }">
             <span v-if="row.cpu_usage != null">{{ row.cpu_usage.toFixed(1) }}%</span>
@@ -67,7 +70,11 @@
             <span v-else class="oc-text-placeholder">-</span>
           </template>
         </el-table-column>
-        <el-table-column prop="user_id" label="用户ID" width="80" align="center" />
+        <el-table-column prop="operator" label="使用人" width="100" align="center">
+          <template #default="{ row }">
+            {{ row.operator || '-' }}
+          </template>
+        </el-table-column>
         <el-table-column prop="skills_count" label="已安装技能" width="100" align="center">
           <template #default="{ row }">
             <el-tag v-if="row.skills_count" type="primary" size="small">{{ row.skills_count }} 个</el-tag>
@@ -136,8 +143,8 @@
         <el-form-item label="内存">
           <el-input v-model="formData.memory" placeholder="如 16GB" />
         </el-form-item>
-        <el-form-item label="用户ID">
-          <el-input v-model="formData.user_id" placeholder="绑定用户ID" />
+        <el-form-item label="使用人">
+          <el-input v-model="formData.operator" placeholder="请输入使用人" />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -284,7 +291,7 @@ const formData = reactive({
   os: '',
   cpu: '',
   memory: '',
-  user_id: '',
+  operator: '',
 })
 
 const formRules = reactive({
@@ -297,7 +304,7 @@ function openDialog() {
 }
 
 function resetForm() {
-  Object.assign(formData, { code: '', hostname: '', ip: '', os: '', cpu: '', memory: '', user_id: '' })
+  Object.assign(formData, { code: '', hostname: '', ip: '', os: '', cpu: '', memory: '', operator: '' })
   formRef.value?.resetFields()
 }
 
@@ -310,8 +317,7 @@ async function handleSubmit() {
   submitting.value = true
   try {
     const payload = { ...formData }
-    if (payload.user_id) payload.user_id = Number(payload.user_id)
-    else delete payload.user_id
+    if (!payload.operator) delete payload.operator
     await createMachine(payload)
     ElMessage.success('机器创建成功')
     dialogVisible.value = false

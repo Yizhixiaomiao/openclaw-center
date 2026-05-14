@@ -40,11 +40,11 @@
   --oc-border-color-light: #f3f4f6;
   --oc-border-color-hover: #d1d5db;
 
-  /* Border Radius */
-  --oc-radius-sm: 6px;
-  --oc-radius-base: 8px;
-  --oc-radius-lg: 12px;
-  --oc-radius-xl: 16px;
+  /* Border Radius — unified */
+  --oc-radius-sm: 20px;
+  --oc-radius-base: 20px;
+  --oc-radius-lg: 20px;
+  --oc-radius-xl: 20px;
   --oc-radius-pill: 20px;
 
   /* Shadows */

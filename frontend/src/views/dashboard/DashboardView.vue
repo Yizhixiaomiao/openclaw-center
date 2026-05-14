@@ -1,5 +1,5 @@
 <template>
-  <div class="oc-page">
+  <div class="oc-page oc-page--scrollable">
     <div class="oc-page-header">
       <div>
         <h1 class="oc-page-header__title">仪表盘</h1>

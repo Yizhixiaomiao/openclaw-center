@@ -22,6 +22,7 @@ class Machine(Base):
     agent_version = Column(String(64))
     status = Column(Enum("online", "offline", "error", "pending_init", "disabled"), default="pending_init")
     current_user = Column(String(128))
+    operator = Column(String(128), nullable=True)
     cpu_usage = Column(Float, nullable=True)
     memory_usage = Column(Float, nullable=True)
     disk_usage = Column(Float, nullable=True)

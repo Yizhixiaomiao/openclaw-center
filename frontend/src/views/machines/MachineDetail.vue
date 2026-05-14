@@ -45,7 +45,7 @@
           <span v-if="machine.disk_usage != null">{{ machine.disk_usage.toFixed(1) }}%</span>
           <span v-else class="oc-text-placeholder">-</span>
         </el-descriptions-item>
-        <el-descriptions-item label="用户ID">{{ machine.user_id }}</el-descriptions-item>
+        <el-descriptions-item label="使用人">{{ machine.operator || '-' }}</el-descriptions-item>
         <el-descriptions-item label="当前用户">{{ machine.current_user || '-' }}</el-descriptions-item>
         <el-descriptions-item label="状态">
           <el-tag :type="statusTagType(machine.status)">{{ statusLabel(machine.status) }}</el-tag>
@@ -108,8 +108,8 @@
             </el-form-item>
           </el-col>
           <el-col :span="8">
-            <el-form-item label="当前用户" prop="current_user">
-              <el-input v-model="editForm.current_user" placeholder="请输入当前用户" />
+            <el-form-item label="使用人" prop="operator">
+              <el-input v-model="editForm.operator" placeholder="请输入使用人" />
             </el-form-item>
           </el-col>
           <el-col :span="8">
@@ -360,7 +360,7 @@ const editForm = reactive({
   ip: '',
   mac: '',
   department: '',
-  current_user: '',
+  operator: '',
 })
 
 const basicFormRules = {
@@ -372,7 +372,7 @@ function startEditBasic() {
   editForm.ip = machine.value.ip || ''
   editForm.mac = machine.value.mac || ''
   editForm.department = machine.value.department || ''
-  editForm.current_user = machine.value.current_user || ''
+  editForm.operator = machine.value.operator || ''
   isEditingBasic.value = true
 }
 
@@ -393,7 +393,7 @@ async function saveBasicInfo() {
       ip: editForm.ip,
       mac: editForm.mac,
       department: editForm.department,
-      current_user: editForm.current_user,
+      operator: editForm.operator,
     })
     ElMessage.success('基本信息已保存')
     isEditingBasic.value = false

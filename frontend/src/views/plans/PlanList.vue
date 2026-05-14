@@ -137,7 +137,7 @@
             <div style="margin-bottom: 8px; font-weight: 600">
               可用模型 ({{ probeResult.models.length }}) — 勾选关联模型
             </div>
-            <el-checkbox-group v-model="selectedModels" style="max-height: 240px; overflow-y: auto; border: 1px solid var(--oc-border-color); border-radius: 6px; padding: 12px;">
+            <el-checkbox-group v-model="selectedModels" style="max-height: 240px; overflow-y: auto; border: 1px solid var(--oc-border-color); border-radius: 20px; padding: 12px;">
               <el-checkbox v-for="m in probeResult.models" :key="m.id" :value="m.id" style="width: 100%; margin-bottom: 4px">
                 <span style="font-family: monospace; font-size: 13px">{{ m.id }}</span>
                 <span v-if="m.owned_by" style="color: var(--oc-text-secondary); font-size: 12px; margin-left: 8px">{{ m.owned_by }}</span>

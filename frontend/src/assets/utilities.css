@@ -7,6 +7,12 @@
   overflow: hidden;
   min-height: 0;
   padding: var(--oc-space-6);
+  border-radius: var(--oc-radius-lg) !important;
+}
+
+/* Scrollable page variant — content scrolls within the page area */
+.oc-page--scrollable {
+  overflow-y: auto;
 }
 
 /* ============ Page Header ============ */
@@ -37,6 +43,7 @@
   flex-direction: column;
   overflow: hidden;
   min-height: 0;
+  border-radius: var(--oc-radius-lg) !important;
 }
 
 .el-tabs__content {
@@ -73,6 +80,7 @@
   flex-direction: column;
   overflow: hidden;
   min-height: 0;
+  border-radius: var(--oc-radius-lg) !important;
 }
 
 /* Card body fills the card, column layout for table + pagination */
@@ -177,7 +185,7 @@
 .oc-code-block {
   background: var(--oc-bg-input);
   padding: var(--oc-space-3);
-  border-radius: var(--oc-radius-base);
+  border-radius: var(--oc-radius-lg) !important;
   font-family: Consolas, Monaco, 'Courier New', monospace;
   font-size: var(--oc-font-base);
   line-height: 1.6;

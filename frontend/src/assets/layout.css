@@ -7,6 +7,7 @@
   max-width: 480px;
   resize: horizontal;
   position: relative;
+  border-radius: 0 var(--oc-radius-lg) var(--oc-radius-lg) 0 !important;
 }
 
 /* Custom resize handle indicator on the right edge */
@@ -78,6 +79,7 @@
   display: flex !important;
   align-items: center !important;
   justify-content: space-between !important;
+  border-radius: 0 0 var(--oc-radius-lg) var(--oc-radius-lg) !important;
 }
 
 .app-topbar .el-breadcrumb {
@@ -96,4 +98,5 @@
   display: flex !important;
   flex-direction: column !important;
   padding: 0 !important;
+  border-radius: var(--oc-radius-lg) !important;
 }

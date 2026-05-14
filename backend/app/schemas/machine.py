@@ -18,6 +18,7 @@ class MachineCreate(BaseModel):
     openclaw_version: Optional[str] = None
     agent_version: Optional[str] = None
     current_user: Optional[str] = None
+    operator: Optional[str] = None
 
 
 class MachineUpdate(BaseModel):
@@ -35,6 +36,7 @@ class MachineUpdate(BaseModel):
     agent_version: Optional[str] = None
     status: Optional[str] = None
     current_user: Optional[str] = None
+    operator: Optional[str] = None
 
 
 class MachineResponse(BaseModel):
@@ -54,6 +56,7 @@ class MachineResponse(BaseModel):
     agent_version: Optional[str] = None
     status: str
     current_user: Optional[str] = None
+    operator: Optional[str] = None
     cpu_usage: Optional[float] = None
     memory_usage: Optional[float] = None
     disk_usage: Optional[float] = None

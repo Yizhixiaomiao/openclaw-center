@@ -41,10 +41,17 @@ def clawhub_search(
     limit: int = Query(20, ge=1, le=50),
     current_user: User = Depends(get_current_user),
 ):
-    resp = _clawhub_client.get(_clawhub_url("/api/v1/search"), params={"q": q, "limit": limit})
-    if resp.status_code != 200:
-        raise HTTPException(status_code=502, detail="ClawHub search failed")
-    return resp.json()
+    try:
+        resp = _clawhub_client.get(_clawhub_url("/api/v1/search"), params={"q": q, "limit": limit})
+        if resp.status_code != 200:
+            raise HTTPException(status_code=502, detail="ClawHub search failed")
+        return resp.json()
+    except httpx.ConnectError:
+        raise HTTPException(status_code=502, detail="无法连接 ClawHub 服务")
+    except httpx.TimeoutException:
+        raise HTTPException(status_code=502, detail="ClawHub 连接超时")
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"ClawHub 请求失败: {str(e)}")
 
 
 @router.get("/clawhub/list")
@@ -57,10 +64,17 @@ def clawhub_list(
     params = {"sort": sort, "limit": limit}
     if cursor:
         params["cursor"] = cursor
-    resp = _clawhub_client.get(_clawhub_url("/api/v1/skills"), params=params)
-    if resp.status_code != 200:
-        raise HTTPException(status_code=502, detail="ClawHub list failed")
-    return resp.json()
+    try:
+        resp = _clawhub_client.get(_clawhub_url("/api/v1/skills"), params=params)
+        if resp.status_code != 200:
+            raise HTTPException(status_code=502, detail="ClawHub list failed")
+        return resp.json()
+    except httpx.ConnectError:
+        raise HTTPException(status_code=502, detail="无法连接 ClawHub 服务")
+    except httpx.TimeoutException:
+        raise HTTPException(status_code=502, detail="ClawHub 连接超时")
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"ClawHub 请求失败: {str(e)}")
 
 
 @router.get("/clawhub/{slug}")
@@ -68,12 +82,21 @@ def clawhub_detail(
     slug: str,
     current_user: User = Depends(get_current_user),
 ):
-    resp = _clawhub_client.get(_clawhub_url(f"/api/v1/skills/{slug}"))
-    if resp.status_code == 404:
-        raise HTTPException(status_code=404, detail="Skill not found on ClawHub")
-    if resp.status_code != 200:
-        raise HTTPException(status_code=502, detail="ClawHub detail failed")
-    return resp.json()
+    try:
+        resp = _clawhub_client.get(_clawhub_url(f"/api/v1/skills/{slug}"))
+        if resp.status_code == 404:
+            raise HTTPException(status_code=404, detail="Skill not found on ClawHub")
+        if resp.status_code != 200:
+            raise HTTPException(status_code=502, detail="ClawHub detail failed")
+        return resp.json()
+    except httpx.ConnectError:
+        raise HTTPException(status_code=502, detail="无法连接 ClawHub 服务")
+    except httpx.TimeoutException:
+        raise HTTPException(status_code=502, detail="ClawHub 连接超时")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"ClawHub 请求失败: {str(e)}")
 
 
 @router.post("/clawhub/install")
@@ -83,11 +106,20 @@ def clawhub_install(
     current_user: User = Depends(require_role("admin", "support", "ops")),
 ):
     # 1. Fetch skill metadata from ClawHub
-    meta_resp = _clawhub_client.get(_clawhub_url(f"/api/v1/skills/{req.slug}"))
-    if meta_resp.status_code == 404:
-        raise HTTPException(status_code=404, detail="Skill not found on ClawHub")
-    if meta_resp.status_code != 200:
-        raise HTTPException(status_code=502, detail="Failed to fetch skill info from ClawHub")
+    try:
+        meta_resp = _clawhub_client.get(_clawhub_url(f"/api/v1/skills/{req.slug}"))
+        if meta_resp.status_code == 404:
+            raise HTTPException(status_code=404, detail="Skill not found on ClawHub")
+        if meta_resp.status_code != 200:
+            raise HTTPException(status_code=502, detail="Failed to fetch skill info from ClawHub")
+    except httpx.ConnectError:
+        raise HTTPException(status_code=502, detail="无法连接 ClawHub 服务")
+    except httpx.TimeoutException:
+        raise HTTPException(status_code=502, detail="ClawHub 连接超时")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"ClawHub 请求失败: {str(e)}")
     meta = meta_resp.json()
     skill_info = meta.get("skill", {})
     latest = meta.get("latestVersion", {})
@@ -96,13 +128,22 @@ def clawhub_install(
     version = latest.get("version", "")
 
     # 2. Download skill zip from ClawHub
-    dl_resp = _clawhub_client.get(
-        _clawhub_url("/api/v1/download"),
-        params={"slug": req.slug},
-        follow_redirects=True,
-    )
-    if dl_resp.status_code != 200:
-        raise HTTPException(status_code=502, detail="Failed to download skill from ClawHub")
+    try:
+        dl_resp = _clawhub_client.get(
+            _clawhub_url("/api/v1/download"),
+            params={"slug": req.slug},
+            follow_redirects=True,
+        )
+        if dl_resp.status_code != 200:
+            raise HTTPException(status_code=502, detail="Failed to download skill from ClawHub")
+    except httpx.ConnectError:
+        raise HTTPException(status_code=502, detail="无法连接 ClawHub 服务")
+    except httpx.TimeoutException:
+        raise HTTPException(status_code=502, detail="ClawHub 下载超时")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"ClawHub 下载失败: {str(e)}")
 
     # 3. Save zip and extract to uploads/skills/{slug}/
     skill_dir = os.path.join(settings.UPLOAD_DIR, "skills", req.slug)

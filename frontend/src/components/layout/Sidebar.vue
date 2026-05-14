@@ -82,6 +82,7 @@ const activeMenu = computed(() => {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  border-radius: 0 var(--oc-radius-lg) var(--oc-radius-lg) 0;
 }
 
 .el-scrollbar {
